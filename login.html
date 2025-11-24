@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Login - ECG Pro</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #4ade80; /* Neon Green */
+            --text-color: #f1f5f9;
+            --border: #334155;
+            --muted: #94a3b8;
+        }
+        body {
+            margin: 0; padding: 0; height: 100vh; display: flex;
+            justify-content: center; align-items: center;
+            background-color: var(--bg-color); color: var(--text-color);
+            font-family: 'Segoe UI', sans-serif; overflow: hidden;
+            position: relative;
+        }
+
+        /* 背景心跳動畫 */
+        .bg-line { position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background: rgba(255,255,255,0.05); z-index: 0; }
+        .pulse-dot {
+            position: absolute; top: 50%; left: 0; width: 6px; height: 6px;
+            background: var(--primary); border-radius: 50%;
+            box-shadow: 0 0 10px var(--primary);
+            transform: translateY(-50%);
+            animation: ecg-move 3s linear infinite; z-index: 0;
+        }
+        @keyframes ecg-move {
+            0% { left: 0; opacity: 0; } 10% { opacity: 1; }
+            40% { transform: translate(0, -50%); } 45% { transform: translate(20px, -30px); }
+            50% { transform: translate(40px, 40px); } 55% { transform: translate(60px, -10px); }
+            60% { transform: translate(80px, -50%); } 90% { opacity: 1; } 100% { left: 100%; opacity: 0; }
+        }
+
+        /* 登入卡片 */
+        .login-card {
+            background: var(--card-bg); width: 100%; max-width: 400px;
+            padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid var(--border); text-align: center; z-index: 1;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+        .logo { font-size: 3rem; margin-bottom: 10px; display: block; }
+        h1 { margin: 0 0 5px 0; font-size: 1.5rem; letter-spacing: 1px; }
+        p.subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 30px; }
+
+        .input-group { text-align: left; margin-bottom: 20px; }
+        label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 5px; font-weight: bold; }
+        input {
+            width: 100%; padding: 12px; background: #0f172a; border: 1px solid var(--border);
+            color: white; border-radius: 6px; font-size: 1rem; outline: none; transition: 0.3s;
+            box-sizing: border-box;
+        }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1); }
+
+        button {
+            width: 100%; padding: 12px; background: var(--primary); color: #0f172a;
+            border: none; border-radius: 6px; font-size: 1rem; font-weight: bold;
+            cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;
+        }
+        button:hover { background: #22c55e; box-shadow: 0 0 15px rgba(74, 222, 128, 0.4); }
+
+        /* --- 2. 免責聲明樣式 --- */
+        .disclaimer {
+            margin-top: 23px;
+            font-size: 0.80rem;
+            color: #64748b;
+            line-height: 1.5;
+            border-top: 1px solid #334155;
+            padding-top: 15px;
+        }
+
+        /* --- 1. 彈出視窗 (Modal) 樣式 --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(5px);
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .modal.show { opacity: 1; pointer-events: auto; }
+        
+        .modal-box {
+            background: var(--card-bg); width: 90%; max-width: 450px;
+            border-radius: 12px; border: 1px solid var(--border);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            overflow: hidden; animation: slideUp 0.4s ease-out;
+        }
+        @keyframes slideUp { from {transform: translateY(20px); opacity: 0;} to {transform: translateY(0); opacity: 1;} }
+
+        .modal-header {
+            background: rgba(255,255,255,0.05); padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+            font-weight: bold; font-size: 1.1rem; color: var(--primary);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .modal-body { padding: 25px 20px; color: var(--text-color); line-height: 1.6; font-size: 0.95rem; }
+        .modal-footer {
+            padding: 15px 20px; text-align: right; border-top: 1px solid var(--border);
+            background: rgba(0,0,0,0.2);
+        }
+        .modal-btn {
+            background: var(--primary); color: #0f172a; border: none;
+            padding: 8px 20px; border-radius: 4px; font-weight: bold; cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .modal-btn:hover { background: #22c55e; }
+
+    </style>
+</head>
+<body>
+
+    <div class="bg-line"></div>
+    <div class="pulse-dot"></div>
+
+    <!-- 登入卡片 -->
+    <div class="login-card">
+        <div class="logo">⚡🏥❤️</div>
+        <h1>ER Trace</h1>
+        <p class="subtitle">「急診心跡」 • 一個整理了數種E.K.G.的網站</p>
+
+        <form onsubmit="handleLogin(event)">
+            <div class="input-group">
+                <label>人員姓名／代號 (Staff ID)</label>
+                <input type="text" id="username" placeholder="請輸入您的姓名..." required autofocus>
+            </div>
+            <button type="submit">簽入系統 (Access)</button>
+        </form>
+
+        <!-- 2. 免責聲明 -->
+        <div class="disclaimer">
+            ⚠️ <strong>聲明：</strong> 本系統內容僅供教學與模擬演練參考，非醫療診斷工具；實際臨床處置請務必諮詢專科醫師或依據醫院作業流程。
+        </div>
+    </div>
+
+    <!-- 1. 歡迎彈出視窗 -->
+    <div id="welcome-modal" class="modal">
+        <div class="modal-box">
+            <!-- [編輯] 視窗標題 -->
+            <div class="modal-header">
+                🤖使用須知🤖
+            </div>
+            <!-- [編輯] 視窗內容 -->
+            <div class="modal-body">
+                <p>Hey，歡迎來到ER Trace！</p>
+                <ul style="padding-left: 20px; margin: 10px 0;">
+                    <li>本系統提供多種心律模擬與ACLS藥物互動</li>
+                    <li>請輸入姓名以進入（隨意輸入即可！）</li>
+                    <li>系統支援電腦與手機版面操作</li>
+					<li>使用電腦請確定網頁顯示百分比調整至100%（或以下）</li>
+					<li>聲明：本系統內容僅供教學與模擬演練參考，非醫療診斷工具，若有醫療需求，請洽臨床醫師或相關專家！</li>
+                </ul>
+                <p style="color: #94a3b8; font-size: 0.9rem;">請點擊下方按鈕開始使用。</p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" onclick="closeModal()">好的！我們開始吧～</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 頁面載入完成後，顯示歡迎彈窗
+        window.addEventListener('load', () => {
+            // 延遲動畫更
+            setTimeout(() => {
+                document.getElementById('welcome-modal').classList.add('show');
+            }, 200);
+        });
+
+        function closeModal() {
+            document.getElementById('welcome-modal').classList.remove('show');
+            // 讓輸入框自動聚焦
+            setTimeout(() => document.getElementById('username').focus(), 100);
+        }
+
+        function handleLogin(e) {
+            e.preventDefault(); 
+            const nameInput = document.getElementById('username');
+            const name = nameInput.value.trim();
+            
+            if (name) {
+                localStorage.setItem('ecg_username', name);
+                
+                const btn = document.querySelector('button[type="submit"]');
+                btn.innerText = "Verifying...";
+                btn.style.opacity = 0.7;
+                
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 600);
+            }
+        }
+    </script>
+</body>
+</html>

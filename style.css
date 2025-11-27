@@ -1,53 +1,65 @@
 /* ================= THEMES ================= */
 :root {
-    /* --- 🏥 Clinical Standard Dark Theme --- */
+    /* --- Default Dark Theme (醫療黑) --- */
     --bg-app: #121212; 
     --bg-panel: #1e1e1e; 
     --bg-card: #2d2d2d;
-    --bg-monitor: #000000; /* 純黑背景，這才像監視器 */
+    --bg-monitor: #000000;
     
     --border-color: #333333; 
     --text-main: #e0e0e0; 
     --text-muted: #a0a0a0;
     --btn-hover: rgba(255,255,255,0.1);
     
-    /* 🏥 醫療標準色 */
-    --c-hr: #00ff00;   /* 經典綠 */
-    --c-spo2: #00ffff; /* 青色/天藍 */
-    --c-bp: #ff5252;   /* 亮紅 */
-    --c-rr: #ffff00;   /* 黃色 */
-    --c-temp: #ffffff; /* 白色 */
+    /* 🏥 使用者指定標準色 */
+    --c-hr: #00ff00;    /* HR: 綠色 */
+    --c-spo2: #00ccff;  /* SpO2: 藍色 */
+    --c-bp: #ffffff;    /* NIBP: 白色 */
+    --c-rr: #ffff00;    /* RR: 黃色 */
+    --c-temp: #ff3333;  /* TEMP: 紅色 */
     
+    /* 解剖圖顏色 */
+    --c-anatomy-outline: #555555; /* 心臟外框 */
+    --c-path-inactive: #444444;   /* 未通電路徑 */
+    --c-path-active: #ffff00;     /* 通電時顏色 (黃) */
+
     /* 狀態燈號 */
     --st-norm: #4caf50; 
     --st-warn: #ff9800; 
     --st-crit: #f44336; 
-    --st-spec: #da70d6; /* 紫色 */
+    --st-spec: #da70d6; 
 
     --card-bg-inner: rgba(255,255,255,0.03);
 }
 
 [data-theme="light"] {
-    --bg-app: #f8f9fa; --bg-panel: #ffffff; --bg-card: #ffffff;
-    --border-color: #dee2e6; --text-main: #212529; --text-muted: #6c757d;
-    --btn-hover: #f1f3f5; --bg-monitor: #ffffff; 
-    --c-hr: #009900; --c-spo2: #009999; --c-bp: #cc0000; --c-rr: #e6b800;
+    --bg-app: #f0f2f5; --bg-panel: #ffffff; --bg-card: #ffffff;
+    --border-color: #ccc; --text-main: #222; --text-muted: #666;
+    --btn-hover: #e9ecef; --bg-monitor: #ffffff; 
+    /* 亮色模式下的調整 */
+    --c-hr: #009900; --c-spo2: #0066cc; --c-bp: #333333; --c-rr: #e6b800; --c-temp: #cc0000;
+    --c-anatomy-outline: #999; --c-path-inactive: #ddd; --c-path-active: #ffcc00;
     --card-bg-inner: #f8fafc;
 }
+
 [data-theme="retro"] {
-    /* 琥珀色單色風格 */
-    --bg-app: #1a1a1a; --bg-panel: #222; --bg-card: #222;
-    --border-color: #444; --text-main: #ffb000; --text-muted: #cc8800;
-    --btn-hover: #333; --bg-monitor: #100a00; 
-    --c-hr: #ffb000; --c-spo2: #ffb000; --c-bp: #ffb000; --c-rr: #ffb000;
+    --bg-app: #222; --bg-panel: #333; --bg-card: #333;
+    --border-color: #555; --text-main: #fa0; --text-muted: #c80;
+    --bg-monitor: #110d00; 
+    /* 復古單色風格 */
+    --c-hr: #fa0; --c-spo2: #fa0; --c-bp: #fa0; --c-rr: #fa0; --c-temp: #fa0;
+    --c-anatomy-outline: #860; --c-path-inactive: #430; --c-path-active: #ff0;
     --card-bg-inner: #222;
     font-family: 'Courier New', monospace;
 }
+
 [data-theme="cyber"] {
     --bg-app: #050510; --bg-panel: #0f0f20; --bg-card: #1a1a3a;
-    --border-color: #5050a0; --text-main: #00f0ff; --text-muted: #0090a0;
-    --bg-monitor: #000000; 
-    --c-hr: #ff00ff; --c-spo2: #00ffff; --c-bp: #ffff00; --c-rr: #00ff00;
+    --border-color: #00f0ff; --text-main: #00f0ff; --text-muted: #0090a0;
+    --bg-monitor: #000; 
+    /* 賽博霓虹色 */
+    --c-hr: #ff00ff; --c-spo2: #00ffff; --c-bp: #ffffff; --c-rr: #ffff00; --c-temp: #ff3333;
+    --c-anatomy-outline: #0055aa; --c-path-inactive: #002244; --c-path-active: #00ffff;
     --card-bg-inner: rgba(0, 20, 60, 0.5);
 }
 
@@ -90,15 +102,23 @@ canvas { display: block; width: 100%; height: 100%; }
 .log-item { background: rgba(0,0,0,0.7); color: #fff; padding: 4px 8px; margin-bottom: 4px; border-radius: 4px; font-size: 0.8rem; border-left: 3px solid var(--c-hr); animation: slideIn 0.3s; }
 @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
 
-/* Vitals & Controls */
+/* Vitals & Controls - 依照要求上色 */
 .vitals-panel { width: 140px; background: #000; border-left: 1px solid #333; display: flex; flex-direction: column; padding: 10px; justify-content: space-between; }
 .vital-row { display: flex; flex-direction: column; align-items: flex-end; margin-bottom: 5px; position: relative; }
-.vital-row .lbl { font-size: 0.7rem; font-weight: bold; position: absolute; top: 2px; left: 0; opacity: 0.7; }
+.vital-row .lbl { font-size: 0.7rem; font-weight: bold; position: absolute; top: 2px; left: 0; opacity: 0.8; }
 .vital-row .val { font-size: 2.2rem; font-weight: 700; line-height: 1; font-family: 'Consolas', 'Monaco', monospace; text-shadow: 0 0 5px currentColor; }
 .vital-row .unit { font-size: 0.6rem; opacity: 0.6; }
 .val-group { font-size: 1.4rem; font-weight: bold; display: flex; align-items: baseline; color: var(--c-bp); }
+
+/* 個別顏色指定 */
+.c-hr .val, .c-hr .lbl { color: var(--c-hr); }
+.c-bp .val, .c-bp .lbl, .c-bp .val-group { color: var(--c-bp); }
+.c-spo2 .val, .c-spo2 .lbl { color: var(--c-spo2); }
+.c-rr .val, .c-rr .lbl { color: var(--c-rr); }
+.c-temp .val, .c-temp .lbl { color: var(--c-temp); }
+
 .nibp-btn { width: 100%; margin-top: 5px; background: #333; border: 1px solid #555; color: #ccc; padding: 2px; font-size: 0.7rem; cursor: pointer; }
-.nibp-btn.active { background: var(--c-bp); color: #fff; border-color: var(--c-bp); }
+.nibp-btn.active { background: var(--c-bp); color: #000; border-color: var(--c-bp); font-weight: bold; }
 
 .control-panel { width: 240px; background: var(--bg-panel); display: flex; flex-direction: column; border-left: 1px solid var(--border-color); }
 .defib-section { padding: 15px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border-color); }
@@ -124,48 +144,59 @@ canvas { display: block; width: 100%; height: 100%; }
 .edu-container { flex: 1; padding: 15px; display: grid; grid-template-columns: 280px 1fr; gap: 15px; overflow: hidden; }
 .anatomy-box, .content-box { background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
 
-/* Anatomy SVG Enhancements */
 .anatomy-box { align-items: center; justify-content: center; padding: 10px; position: relative; }
 .box-header { position: absolute; top: 10px; left: 15px; font-size: 0.8rem; color: var(--text-muted); font-weight: bold; }
 .heart-svg { width: 100%; max-width: 220px; height: auto; }
-.path-heart { fill: var(--bg-panel); stroke: var(--border-color); stroke-width: 2; transition: 0.3s; }
 
-/* === 導電路徑與互動 === */
-/* 預設隱藏線條 */
+/* --- ⚡ 電位傳導動畫與顏色修正 --- */
+.path-heart { 
+    fill: var(--bg-panel); 
+    stroke: var(--c-anatomy-outline); /* 隨主題變色 */
+    stroke-width: 2; 
+    transition: 0.3s; 
+}
+
 .path-conduction { 
     fill: none; 
-    stroke: #fbbf24; 
-    stroke-width: 3; 
+    stroke: var(--c-path-active); 
+    stroke-width: 4; 
     stroke-linecap: round;
     stroke-linejoin: round;
     stroke-dasharray: 100; 
-    stroke-dashoffset: 100; 
-    opacity: 0.1;
-    pointer-events: stroke; /* 讓線條可被 hover */
-    cursor: help; /* 提示可互動 */
+    stroke-dashoffset: 100; /* 初始隱藏 */
+    opacity: 0.3; /* 預設可以看到暗暗的路徑 */
+    stroke: var(--c-path-inactive); /* 未通電時的顏色 */
+    pointer-events: stroke;
+    cursor: help;
     transition: opacity 0.2s;
 }
+
 /* 節點 */
 .node { 
-    fill: #fbbf24; 
-    opacity: 0.3; 
+    fill: var(--c-path-inactive); 
+    opacity: 0.5; 
     cursor: help;
     transition: 0.1s; 
 }
 
-/* Hover 效果 */
-.path-conduction:hover, .node:hover { opacity: 1; stroke: #fff; fill: #fff; filter: drop-shadow(0 0 5px #fff); }
+.path-conduction:hover, .node:hover { 
+    opacity: 1; 
+    stroke: #fff; 
+    fill: #fff; 
+    filter: drop-shadow(0 0 5px #fff); 
+}
 
-/* 動畫觸發 Class */
+/* 通電動畫 */
 .path-conduction.flowing {
     opacity: 1;
-    filter: drop-shadow(0 0 5px #fbbf24);
+    stroke: var(--c-path-active); /* 變亮 */
+    filter: drop-shadow(0 0 5px var(--c-path-active));
     animation: flowPath 0.3s linear forwards;
 }
 .node.active-node { 
-    fill: #ffff00; 
+    fill: var(--c-path-active);
     opacity: 1; 
-    filter: drop-shadow(0 0 8px #ffff00); 
+    filter: drop-shadow(0 0 8px var(--c-path-active)); 
     transform: scale(1.3); 
     transform-origin: center; 
 }
@@ -173,7 +204,7 @@ canvas { display: block; width: 100%; height: 100%; }
 @keyframes flowPath { to { stroke-dashoffset: 0; } }
 
 .block-bar { fill: #ef4444; display: none; }
-.reentry-ring { fill: none; stroke: #facc15; stroke-width: 3; stroke-dasharray: 4 4; display: none; animation: spin 1s linear infinite; transform-origin: 150px 140px; }
+.reentry-ring { fill: none; stroke: var(--c-path-active); stroke-width: 3; stroke-dasharray: 4 4; display: none; animation: spin 1s linear infinite; transform-origin: 150px 140px; }
 .flash-dot { fill: #ef4444; animation: flash 0.5s infinite; }
 
 /* Content & Text */
@@ -188,7 +219,6 @@ canvas { display: block; width: 100%; height: 100%; }
 .tab-content { display: none; animation: fadeIn 0.3s; }
 .tab-content.active { display: block; }
 
-/* Card Style Text */
 .info-card { background: var(--card-bg-inner); border: 1px solid var(--border-color); border-radius: 6px; padding: 15px; margin-bottom: 15px; }
 .info-card h4 { color: var(--c-spo2); margin: 0 0 10px 0; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
 .text-body { font-size: 0.95rem; line-height: 1.6; color: var(--text-main); }
@@ -201,7 +231,6 @@ canvas { display: block; width: 100%; height: 100%; }
 .list-nurse li::before { color: #facc15; content: "⚡"; font-size: 0.8rem; top: 6px; }
 #alert-box { margin-bottom: 15px; padding: 12px; border-radius: 6px; display: none; font-weight: bold; text-align: center; animation: pulse 2s infinite; }
 
-/* Animations & Modal */
 @keyframes pulse { 0%{transform:scale(1);} 50%{transform:scale(1.02);} 100%{transform:scale(1);} }
 @keyframes spin { to {transform: rotate(360deg);} }
 @keyframes flash { 0%,100% {opacity:0.3;} 50% {opacity:1; filter: drop-shadow(0 0 5px #fbbf24);} }

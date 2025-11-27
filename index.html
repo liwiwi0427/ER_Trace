@@ -1,24 +1,243 @@
-<!-- Anatomy Box 部分 -->
-<div class="glass-panel anatomy-wrap">
-    <div id="anat-tip" class="anat-tip">Interactive Heart View</div>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECG Pro Ultimate UI</title>
     
-    <svg viewBox="0 0 300 350" style="height:100%; width:100%; overflow:visible;">
-        <!-- 肌肉外框 -->
-        <path id="h-muscle" class="path-muscle" d="M150 330 C 50 300, 20 180, 20 120 C 20 60, 80 20, 150 90 C 220 20, 280 60, 280 120 C 280 180, 250 300, 150 330 Z" />
+    <!-- 1. 載入 CSS 樣式表 -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- 2. 安全檢查：如果沒登入則踢回 -->
+    <script>
+        if (!localStorage.getItem('ecg_username')) {
+            window.location.replace('login.html');
+        }
+    </script>
+</head>
+<body>
+
+<!-- 左側選單欄 -->
+<aside>
+    <div class="brand">⚡ ECG Pro <span>V12</span></div>
+    
+    <!-- 主題選擇 -->
+    <div class="theme-selector">
+        <label>🎨 介面風格 (Theme)</label>
+        <select id="themeSelect" onchange="changeTheme(this.value)">
+            <option value="dark">🏥 專業醫療黑 (Dark)</option>
+            <option value="light">☀️ 日間病房白 (Light)</option>
+            <option value="retro">📺 復古螢光綠 (Retro)</option>
+            <option value="cyber">🤖 賽博龐克 (Cyber)</option>
+        </select>
+    </div>
+
+    <!-- 導航按鈕 (Keys 必須對應 data.js) -->
+    <div class="nav-scroll">
+        <div class="cat-header">SINUS (竇性)</div>
+        <div class="nav-btn active" onclick="loadCase('nsr')"><span>NSR</span><div class="dot norm"></div></div>
+        <div class="nav-btn" onclick="loadCase('sb')"><span>Sinus Brady</span><div class="dot norm"></div></div>
         
-        <!-- 1. SA 到 AV 路徑 -->
-        <path id="p-sa-av" class="path-wire" d="M80 80 Q 115 110 150 140" data-name="Internodal Pathway" />
-        <!-- 2. His 束 -->
-        <path id="p-his" class="path-wire" d="M150 140 L 150 175" data-name="Bundle of His" />
-        <!-- 3. 束支與柏金氏 -->
-        <path id="p-branches" class="path-wire" d="M150 175 L 100 260 M 150 175 L 200 260" data-name="Purkinje / Branches" />
-        
-        <!-- 節點 -->
-        <circle id="n-sa" class="node" cx="80" cy="80" r="10" data-name="SA Node (竇房結)" />
-        <circle id="n-av" class="node" cx="150" cy="140" r="8" data-name="AV Node (房室結)" />
-        
-        <!-- 病理記號 -->
-        <rect id="vis-block" x="135" y="145" width="30" height="8" fill="red" style="display:none;" />
-        <circle id="vis-reentry" cx="150" cy="140" r="15" fill="none" stroke="yellow" stroke-width="2" stroke-dasharray="4" style="display:none;" />
-    </svg>
+        <div class="cat-header">ATRIAL (房性)</div>
+        <div class="nav-btn" onclick="loadCase('psvt')"><span>PSVT</span><div class="dot warn"></div></div>
+        <div class="nav-btn" onclick="loadCase('afib')"><span>AFib</span><div class="dot warn"></div></div>
+        <div class="nav-btn" onclick="loadCase('afl')"><span>A-Flutter</span><div class="dot warn"></div></div>
+
+        <div class="cat-header">VENTRICULAR (室性)</div>
+        <div class="nav-btn" onclick="loadCase('pvc')"><span>PVC</span><div class="dot warn"></div></div>
+        <div class="nav-btn" onclick="loadCase('vt')"><span>VT (Pulse)</span><div class="dot crit"></div></div>
+        <div class="nav-btn" onclick="loadCase('pvt')"><span>pVT (No Pulse)</span><div class="dot crit"></div></div>
+        <div class="nav-btn" onclick="loadCase('tdp')"><span>TdP</span><div class="dot crit"></div></div>
+        <div class="nav-btn" onclick="loadCase('vf')"><span>VF</span><div class="dot crit"></div></div>
+
+        <div class="cat-header">BLOCKS / ARREST</div>
+        <div class="nav-btn" onclick="loadCase('avb1')"><span>1° AVB</span><div class="dot spec"></div></div>
+        <div class="nav-btn" onclick="loadCase('avb2t1')"><span>2° Type I</span><div class="dot spec"></div></div>
+        <div class="nav-btn" onclick="loadCase('avb2t2')"><span>2° Type II</span><div class="dot spec"></div></div>
+        <div class="nav-btn" onclick="loadCase('avb3')"><span>3° AVB</span><div class="dot spec"></div></div>
+        <div class="nav-btn" onclick="loadCase('pea')"><span>PEA</span><div class="dot crit"></div></div>
+        <div class="nav-btn" onclick="loadCase('asystole')"><span>Asystole</span><div class="dot crit"></div></div>
+    </div>
+
+    <!-- 底部功能 -->
+    <div class="sidebar-footer">
+        <button class="icon-btn" onclick="openModal()" title="System Info">ℹ️</button>
+        <button class="icon-btn" onclick="logout()" title="Logout" style="color:var(--st-crit);">🚪</button>
+    </div>
+</aside>
+
+<!-- 主操作區 -->
+<main>
+    <div class="top-deck">
+        <!-- A. 監視器螢幕 -->
+        <div class="monitor-frame">
+            <div class="monitor-screen">
+                <div class="ecg-grid"></div>
+                
+                <!-- 閃光層 (電擊用) -->
+                <div id="shock-flash" class="flash-overlay" style="opacity:0; transition:0.2s; position:absolute; inset:0; background:white; pointer-events:none;"></div>
+                
+                <!-- 畫布 -->
+                <canvas id="ecgCanvas"></canvas>
+                
+                <!-- 覆蓋資訊 -->
+                <div class="monitor-overlay">
+                    <div class="monitor-header">LEAD II <span class="monitor-mode">Monitor Mode</span></div>
+                    <div id="user-staff-badge">Staff: --</div>
+                </div>
+                
+                <!-- 藥物給予紀錄 -->
+                <div class="med-log" id="med-log"></div>
+            </div>
+            
+            <!-- B. 生命徵象板 -->
+            <div class="vitals-panel">
+                <div class="vital-row c-hr">
+                    <span class="lbl">HR</span>
+                    <span class="val" id="val-hr">--</span>
+                    <span class="unit">bpm</span>
+                </div>
+                <div class="vital-row c-bp">
+                    <span class="lbl">NIBP</span>
+                    <div class="val-group"><span id="val-sys">--</span>/<span id="val-dia">--</span></div>
+                    <button class="nibp-btn" id="btn-nibp" onclick="runNIBP()">測量 (Start)</button>
+                </div>
+                <div class="vital-row c-spo2">
+                    <span class="lbl">SpO2</span>
+                    <span class="val" id="val-spo2">--</span>
+                    <span class="unit">%</span>
+                </div>
+                <div class="vital-row c-rr">
+                    <span class="lbl">RR</span>
+                    <span class="val" id="val-rr">--</span>
+                    <span class="unit">rpm</span>
+                </div>
+                <div class="vital-row c-temp">
+                    <span class="lbl">TEMP</span>
+                    <span class="val" id="val-temp">--</span>
+                    <span class="unit">°C</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- C. 控制台 (電擊與藥物) -->
+        <div class="control-panel">
+            <div class="defib-section">
+                <div class="energy-lcd"><span id="joules">200</span> J</div>
+                <div class="defib-controls">
+                    <button class="btn-defib btn-charge" id="btn-chg" onclick="charge()">CHARGE</button>
+                    <button class="btn-defib btn-shock" id="btn-shk" onclick="shock()" disabled>SHOCK</button>
+                </div>
+            </div>
+            <div class="meds-section">
+                <div class="section-title">ACLS MEDS</div>
+                <div class="meds-grid">
+                    <button class="drug-btn d-epi" onclick="giveDrug('Epi 1mg')">Epi <span>1mg</span></button>
+                    <button class="drug-btn d-amio" onclick="giveDrug('Amio 150mg')">Amio <span>150mg</span></button>
+                    <button class="drug-btn d-aden" onclick="giveDrug('Adeno 6mg')">Adeno <span>6mg</span></button>
+                    <button class="drug-btn d-atro" onclick="giveDrug('Atro 1mg')">Atro <span>1mg</span></button>
+                    <button class="drug-btn d-mag" onclick="giveDrug('Mag 2g')">Mag <span>2g</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- D. 教學區 -->
+    <div class="edu-container">
+        <!-- 1. 心臟解剖動畫 -->
+        <div class="anatomy-box glass-panel anatomy-wrap">
+            <div id="anat-tip" class="anat-tip" style="position:absolute; top:10px; left:15px;">
+                Interactive Heart View
+            </div>
+            
+            <svg class="heart-svg" viewBox="0 0 300 350" style="overflow:visible;">
+                <!-- 心肌底圖 -->
+                <path id="h-muscle" class="path-heart" d="M150 330 C 50 300, 20 180, 20 120 C 20 60, 80 20, 150 90 C 220 20, 280 60, 280 120 C 280 180, 250 300, 150 330 Z" />
+                
+                <!-- 傳導路徑 (重要ID) -->
+                <!-- 路徑1: Internodal (SA to AV) -->
+                <path id="p-internodal" class="path-conduction" d="M80 80 Q 115 110 150 140" data-name="Internodal Pathways (結間路徑)" />
+                <!-- 路徑2: Bundle of His -->
+                <path id="p-his" class="path-conduction" d="M150 140 L 150 175" data-name="Bundle of His (希氏束)" />
+                <!-- 路徑3: Bundle Branches / Purkinje -->
+                <path id="p-branches" class="path-conduction" d="M150 175 L 100 260 M 150 175 L 200 260" data-name="Purkinje / Bundle Branches" />
+                
+                <!-- 節點 -->
+                <circle id="n-sa" class="node" cx="80" cy="80" r="9" data-name="SA Node (竇房結)" />
+                <circle id="n-av" class="node" cx="150" cy="140" r="8" data-name="AV Node (房室結)" />
+                
+                <!-- 異常標示 (預設隱藏) -->
+                <rect id="vis-block" class="block-bar" x="135" y="145" width="30" height="8" rx="2" style="display:none;" />
+                <circle id="vis-reentry" class="reentry-ring" cx="150" cy="140" r="15" style="display:none; fill:none; stroke:#ff0;" />
+                <g id="vis-tdp" style="display:none;">
+                    <circle class="flash-dot" cx="120" cy="220" r="6" />
+                    <circle class="flash-dot" cx="180" cy="250" r="6" style="animation-delay:0.2s" />
+                </g>
+            </svg>
+        </div>
+
+        <!-- 2. 文字資訊卡片 -->
+        <div class="content-box glass-panel">
+            <div class="content-header">
+                <div class="rhythm-title" id="txt-title">Loading...</div>
+                <span class="rhythm-tag" id="txt-tag">--</span>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab-btn active" onclick="openTab('1')">Criteria (判讀)</button>
+                <button class="tab-btn" onclick="openTab('2')">Pathology (病理)</button>
+                <button class="tab-btn" onclick="openTab('3')">Rx & Care (處置)</button>
+            </div>
+            
+            <div class="tab-viewport">
+                <!-- Tab 1: Criteria -->
+                <div id="t1" class="tab-content active">
+                    <div id="alert-banner" style="display:none;"></div>
+                    <div class="info-card">
+                        <h4>📋 特徵 FEATURES</h4>
+                        <ul class="styled-list" id="list-cri"></ul>
+                    </div>
+                </div>
+                <!-- Tab 2: Patho -->
+                <div id="t2" class="tab-content">
+                    <p id="txt-patho" class="text-body"></p>
+                    <div class="info-card mt-10">
+                        <h4>🔍 成因 CAUSES</h4>
+                        <ul class="styled-list" id="list-cause"></ul>
+                    </div>
+                </div>
+                <!-- Tab 3: Rx -->
+                <div id="t3" class="tab-content">
+                    <div class="info-card">
+                        <h4>💊 ACLS PROTOCOL</h4>
+                        <ul class="styled-list list-rx" id="list-rx"></ul>
+                    </div>
+                    <div class="info-card mt-10">
+                        <h4>⚡ NURSING PRIORITY</h4>
+                        <ul class="styled-list list-nurse" id="list-nur"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- 系統資訊視窗 -->
+<div id="info-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header"><span>System Info</span><span class="close-btn" onclick="closeModal()">✕</span></div>
+        <div class="modal-body">
+            <p><strong>ECG Pro Simulator V12.0</strong></p>
+            <p>Current User: <span id="modal-user-name">--</span></p>
+            <hr style="margin:15px 0; border-top:1px solid #444;">
+            <p style="font-size:0.8rem; opacity:0.7;">僅供醫學教育與演練使用，非醫療器材。</p>
+        </div>
+    </div>
 </div>
+
+<!-- 3. 載入腳本：順序很重要！Data 必須先於 Logic -->
+<script src="data.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>

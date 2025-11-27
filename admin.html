@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ECG Admin Generator</title>
+    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="style.css"> <!-- 重用部分變數 -->
+    <style>
+        /* Admin specific styles override */
+        body { overflow-y: auto; display: block; padding: 20px; }
+        .admin-form { max-width: 800px; margin: 0 auto; background: var(--bg-panel); padding: 20px; border: 1px solid #333; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; color: var(--text-muted); margin-bottom: 5px; }
+        input, textarea { width: 100%; padding: 8px; background: #000; border: 1px solid #333; color: #fff; }
+        textarea { height: 100px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Data Code Generator</h1>
+    <p>Use this to generate the JS code for a new rhythm case.</p>
+    
+    <div class="admin-form">
+        <div class="form-group">
+            <label>ID Key (e.g., 'vt_new')</label>
+            <input type="text" id="a-key">
+        </div>
+        <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="a-title">
+        </div>
+        <!-- 其他欄位省略，原理同上 -->
+        <button class="nav-btn" onclick="generate()">GENERATE CODE</button>
+        
+        <pre id="output" style="background:#222; padding:10px; color:#0f0; margin-top:20px; white-space:pre-wrap;"></pre>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

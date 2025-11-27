@@ -1,50 +1,120 @@
+/* =========================================
+   CORE VARIABLES & MEDICAL COLORS
+   ========================================= */
 :root {
-    --bg-app: #0f172a; --bg-panel: #1e293b; --bg-card: #262626;
-    --border-color: #334155; --text-main: #f1f5f9; --text-muted: #94a3b8;
-    --btn-hover: rgba(255,255,255,0.05); --bg-monitor: #000000;
-    
-    /* 🏥 醫療級監測配色 - 嚴格依需求設定 */
+    /* 🏥 臨床標準監測配色 (嚴格執行) */
     --c-hr: #00ff00;    /* HR: 綠 */
-    --c-spo2: #0088ff;  /* SpO2: 藍 (調整為較亮的醫用藍) */
-    --c-bp: #ffffff;    /* NIBP: 白 */
-    --c-rr: #ffff00;    /* RR: 黃 */
-    --c-temp: #ff3333;  /* Temp: 紅 */
-    
-    --st-norm: #4caf50; --st-warn: #ff9800; --st-crit: #f44336; --st-spec: #9c27b0;
-    --drug-epi: #dca546; --drug-aden: #ef5350; --drug-amio: #42a5f5; --drug-atro: #66bb6a; --drug-mag: #ab47bc;
+    --c-spo2: #00b0ff;  /* SpO2: 醫用亮藍 */
+    --c-bp: #ffffff;    /* NIBP: 純白 */
+    --c-rr: #ffff00;    /* RR: 亮黃 */
+    --c-temp: #ff3333;  /* Temp: 亮紅 */
+
+    /* 解剖圖配色 */
+    --anat-bg: rgba(255,255,255,0.05);
+    --anat-outline: #555;
+    --anat-wire-off: #333;
+    --anat-wire-on: #ffff00;
+
+    /* 介面系統色 (Dark Default) */
+    --bg-app: #121212; --bg-panel: #1e1e1e; --bg-monitor: #000000;
+    --border-col: #333; --text-main: #e0e0e0; --text-muted: #888;
+    --btn-hover: rgba(255,255,255,0.1);
 }
 
+/* THEME: Light */
 [data-theme="light"] {
-    --bg-app: #f1f5f9; --bg-panel: #ffffff; --bg-card: #ffffff;
-    --border-color: #e2e8f0; --text-main: #1e293b; --text-muted: #64748b; --btn-hover: #f1f5f9;
+    --bg-app: #f0f2f5; --bg-panel: #fff; --bg-monitor: #fff;
+    --border-col: #ccc; --text-main: #222; --text-muted: #666; --btn-hover: #e9ecef;
+    --anat-outline: #bbb; --anat-wire-off: #ddd; --anat-wire-on: #ffa500;
+    /* Light Mode colors need contrast adjustment */
+    --c-hr: #008800; --c-spo2: #0066cc; --c-bp: #333; --c-rr: #cc9900; --c-temp: #cc0000;
 }
 
-/* ... 其他 Reset, Layout, Sidebar, Monitor ... */
-
-/* --- Anatomy SVG Interactions (新增) --- */
-.anatomy-box { position: relative; } /* 為提示文字定位 */
-#anatomy-tooltip {
-    position: absolute; top: 10px; left: 10px;
-    background: rgba(0,0,0,0.8); color: #fff; padding: 4px 8px; 
-    border-radius: 4px; font-size: 0.8rem; display: none; pointer-events: none;
+/* THEME: Cyber */
+[data-theme="cyber"] {
+    --bg-app: #03030f; --bg-panel: #0b0b1a; --bg-monitor: #000;
+    --border-col: #00ffff; --text-main: #00ffff; --text-muted: #008888;
+    --anat-wire-on: #00ffff; --anat-wire-off: #002233;
 }
 
-.heart-svg .node, .heart-svg .path-conduction {
-    cursor: help;
-    pointer-events: all; /* 確保能觸發 hover */
-    transition: filter 0.2s;
-}
-.heart-svg .node:hover, .heart-svg .path-conduction:hover {
-    filter: drop-shadow(0 0 5px yellow);
-    stroke: yellow;
-    fill: yellow;
-}
+/* ================= LAYOUT ================= */
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+body { font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; background: var(--bg-app); color: var(--text-main); overflow: hidden; }
 
-/* NIBP Button Active Style (新增) */
-.nibp-btn.measuring {
-    background: var(--c-bp);
-    color: #000;
-    font-weight: bold;
-    animation: pulse-bp 1s infinite;
+/* Sidebar */
+aside { width: 240px; background: var(--bg-panel); border-right: 1px solid var(--border-col); display: flex; flex-direction: column; }
+.brand { padding: 15px; font-size: 1.2rem; font-weight: 900; color: var(--c-hr); border-bottom: 1px solid var(--border-col); }
+.nav-scroll { flex: 1; overflow-y: auto; padding: 10px; }
+.nav-btn { padding: 8px; margin-bottom: 2px; cursor: pointer; color: var(--text-muted); border-left: 3px solid transparent; display: flex; justify-content: space-between; transition: 0.2s; }
+.nav-btn:hover { background: var(--btn-hover); color: var(--text-main); }
+.nav-btn.active { border-left-color: var(--c-hr); color: #fff; background: rgba(255,255,255,0.05); }
+.footer { border-top: 1px solid var(--border-col); padding: 10px; display: flex; }
+.icon-btn { flex: 1; border: none; background: transparent; color: var(--text-muted); cursor: pointer; padding: 5px; font-size: 1.2rem; }
+.icon-btn:hover { color: var(--text-main); }
+
+/* Main Area */
+main { flex: 1; display: flex; flex-direction: column; }
+.top-deck { flex: 0 0 380px; display: flex; border-bottom: 1px solid var(--border-col); }
+
+/* Monitor & Vitals */
+.monitor-group { flex: 1; display: flex; position: relative; }
+.screen { flex: 1; background: var(--bg-monitor); position: relative; overflow: hidden; border-right: 1px solid #333; }
+canvas { display: block; width: 100%; height: 100%; }
+.overlay { position: absolute; top: 10px; left: 15px; font-family: 'Consolas', monospace; z-index: 10; pointer-events: none; }
+.vitals { width: 140px; background: #000; border-left: 1px solid #333; display: flex; flex-direction: column; padding: 10px; }
+.v-row { text-align: right; position: relative; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.v-lbl { font-size: 0.7rem; position: absolute; top: 0; right: 0; font-weight: bold; opacity: 0.8; }
+.v-val { font-size: 2rem; font-weight: bold; font-family: 'Impact', sans-serif; letter-spacing: 1px; }
+.c-hr { color: var(--c-hr); } .c-spo2 { color: var(--c-spo2); } .c-bp { color: var(--c-bp); } .c-rr { color: var(--c-rr); } .c-temp { color: var(--c-temp); }
+
+/* Controls */
+.controls { width: 220px; background: var(--bg-panel); border-left: 1px solid var(--border-col); display: flex; flex-direction: column; }
+.defib-wrap { padding: 10px; border-bottom: 1px solid var(--border-col); background: rgba(0,0,0,0.2); }
+.lcd { background: #000; color: #0f0; text-align: center; border: 2px solid #444; border-radius: 4px; font-family: monospace; font-size: 1.2rem; margin-bottom: 5px; }
+.btn-grid { display: flex; gap: 5px; }
+.action-btn { flex: 1; padding: 10px; font-weight: bold; border: none; border-radius: 3px; cursor: pointer; color: #fff; }
+.b-chg { background: #f9a825; } .b-shk { background: #333; cursor: not-allowed; } 
+.b-shk.ready { background: #d50000; animation: blink 0.5s infinite; }
+.meds-list { flex: 1; overflow-y: auto; padding: 10px; }
+.drug-btn { width: 100%; background: transparent; border: 1px solid var(--border-col); color: var(--text-main); padding: 8px; text-align: left; margin-bottom: 5px; border-left: 4px solid #555; cursor: pointer; transition: 0.2s; }
+.drug-btn:hover { background: var(--btn-hover); transform: translateX(2px); }
+
+/* Education & Anatomy */
+.edu-deck { flex: 1; display: grid; grid-template-columns: 300px 1fr; gap: 15px; padding: 15px; overflow: hidden; }
+.panel { background: rgba(255,255,255,0.02); border: 1px solid var(--border-col); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+/* SVG Styles */
+.svg-wrap { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; }
+.path-muscle { fill: none; stroke: var(--anat-outline); stroke-width: 2; transition: 0.3s; }
+.path-wire { fill: none; stroke: var(--anat-wire-off); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 80; stroke-dashoffset: 80; opacity: 0.3; transition: 0.2s; cursor: help; pointer-events: stroke; }
+.path-wire:hover { stroke: #fff; opacity: 1; }
+.path-wire.active { stroke: var(--anat-wire-on); opacity: 1; animation: flow 0.4s linear forwards; filter: drop-shadow(0 0 5px var(--anat-wire-on)); }
+.node { fill: var(--anat-wire-off); cursor: help; }
+.node:hover { fill: #fff; }
+.node.active { fill: var(--anat-wire-on); transform: scale(1.3); transform-origin: center; filter: drop-shadow(0 0 5px var(--anat-wire-on)); }
+
+/* Tabs */
+.tabs { display: flex; border-bottom: 1px solid var(--border-col); }
+.tab { flex: 1; padding: 10px; background: transparent; color: var(--text-muted); border: none; cursor: pointer; border-bottom: 2px solid transparent; }
+.tab.active { color: #0088ff; border-color: #0088ff; background: rgba(0,136,255,0.05); }
+.content-area { flex: 1; overflow-y: auto; padding: 15px; }
+.content-pane { display: none; } .content-pane.active { display: block; }
+ul.styled { padding-left: 20px; line-height: 1.6; font-size: 0.9rem; }
+
+/* Utils */
+.nibp-btn { width: 100%; border: 1px solid #555; background: #333; color: #fff; font-size: 0.7rem; margin-top: 5px; cursor: pointer; }
+.nibp-btn.running { background: #fff; color: #000; animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0.5; } }
+@keyframes flow { to { stroke-dashoffset: 0; } }
+
+/* RWD */
+@media (max-width: 900px) {
+    body { flex-direction: column; overflow-y: auto; }
+    aside { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-col); }
+    .top-deck { flex-direction: column; height: auto; }
+    .monitor-group { height: 260px; }
+    .vitals { position: absolute; right: 0; top: 0; height: 100%; background: rgba(0,0,0,0.8); border: none; width: 90px; }
+    .control-panel { height: 160px; width: 100%; flex-direction: row; border-left: none; }
+    .edu-deck { display: block; } .panel { margin-bottom: 10px; height: auto; min-height: 300px; }
+    .anatomy-box { display: none; } /* Hide heavy anatomy on mobile */
 }
-@keyframes pulse-bp { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }

@@ -111,25 +111,72 @@
     </div>
 
     <!-- Education -->
-    <div class="edu-container">
+<div class="edu-container">
+        <!-- 🫀 Anatomy Box -->
         <div class="anatomy-box">
-            <h4 style="color:var(--text-muted); margin-top:0;">電位傳導路徑</h4>
-            <svg class="heart-svg" viewBox="0 0 300 350">
+            <!-- 互動文字提示區 -->
+            <div id="anat-tip" style="position: absolute; top:10px; left:15px; font-size:0.8rem; font-weight:bold; color:var(--text-muted);">
+                Move mouse over heart...
+            </div>
+            
+            <svg class="heart-svg" viewBox="0 0 300 350" style="overflow:visible;">
+                <!-- 1. 心肌底圖 -->
                 <path id="heart-muscle" class="path-heart" d="M150 330 C 50 300, 20 180, 20 120 C 20 60, 80 20, 150 90 C 220 20, 280 60, 280 120 C 280 180, 250 300, 150 330 Z" />
-                <path class="path-conduction" d="M80 80 Q 115 110 150 140" />
-                <path class="path-conduction" d="M150 140 L 150 190 L 100 260 M 150 190 L 200 260" />
-                <circle id="node-sa" class="node" cx="80" cy="80" r="8" />
-                <circle id="node-av" class="node" cx="150" cy="140" r="6" />
-                <rect id="vis-block" class="block-bar" x="135" y="145" width="30" height="8" rx="2" />
-                <circle id="vis-psvt" cx="150" cy="140" r="15" fill="none" stroke="#fdd835" stroke-width="3" stroke-dasharray="4,4" style="display:none;" />
+                
+                <!-- 2. 傳導路徑 -->
+                <!-- Internodal Pathways -->
+                <path id="p-internodal" class="path-conduction" d="M80 80 Q 115 110 150 140" data-name="結間路徑 (Internodal Pathways)" />
+                <!-- Bundle of His -->
+                <path id="p-his" class="path-conduction" d="M150 140 L 150 175" data-name="希氏束 (Bundle of His)" />
+                <!-- Bundle Branches / Purkinje -->
+                <path id="p-branches" class="path-conduction" d="M150 175 L 100 260 M 150 175 L 200 260" data-name="束支/柏金氏纖維 (Purkinje Fibers)" />
+                
+                <!-- 3. 節點 (Nodes) -->
+                <circle id="n-sa" class="node" cx="80" cy="80" r="9" data-name="竇房結 (SA Node)" />
+                <circle id="n-av" class="node" cx="150" cy="140" r="7" data-name="房室結 (AV Node)" />
+                
+                <!-- 4. 病理標示 (預設隱藏) -->
+                <rect id="vis-block" class="block-bar" x="135" y="145" width="30" height="8" rx="2" style="display:none;" />
+                <g id="vis-psvt" style="display:none;">
+                    <circle class="reentry-ring" cx="150" cy="140" r="15" />
+                </g>
                 <g id="vis-tdp" style="display:none;">
-                    <circle class="flash" cx="120" cy="220" r="6" fill="red" />
-                    <circle class="flash" cx="180" cy="250" r="6" fill="red" style="animation-delay:0.2s"/>
+                    <circle class="flash-dot" cx="120" cy="220" r="6" fill="red" />
+                    <circle class="flash-dot" cx="180" cy="250" r="6" fill="red" />
                 </g>
             </svg>
-            <p id="anatomy-text" style="color:var(--text-muted); font-size:0.8rem; text-align:center; margin-top:10px;">Normal</p>
+            <p id="anatomy-text" style="color:var(--text-main); font-weight:bold; margin-top:5px;">Normal Sinus Rhythm</p>
         </div>
 
+        <div class="content-box">
+            <div class="content-header">
+                <div class="rhythm-title" id="txt-title">NSR</div>
+                <span class="rhythm-tag" id="txt-tag">Normal</span>
+            </div>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="setTab('overview')">特徵</button>
+                <button class="tab-btn" onclick="setTab('patho')">病理</button>
+                <button class="tab-btn" onclick="setTab('rx')">處置</button>
+            </div>
+            <div style="flex:1; overflow:auto; padding:15px;">
+                <div id="tab-overview" class="tab-content active">
+                    <div id="alert-box" style="padding:10px; margin-bottom:10px; border-radius:4px; font-weight:bold; display:none; text-align:center;"></div>
+                    <ul id="list-criteria" style="margin-left:20px;"></ul>
+                </div>
+                <div id="tab-patho" class="tab-content">
+                    <p id="txt-patho" style="margin-bottom:15px; color:#ddd;"></p>
+                    <h4 style="color:var(--c-spo2);">🔍 成因</h4>
+                    <ul id="list-causes" style="margin-left:20px;"></ul>
+                </div>
+                <div id="tab-rx" class="tab-content">
+                    <h4 style="color:#f472b6;">💊 治療指引</h4>
+                    <ul id="list-rx" style="margin-left:20px;"></ul>
+                    <h4 style="color:#facc15; margin-top:10px;">⚡ 護理重點</h4>
+                    <ul id="list-nurse" style="margin-left:20px;"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
         <div class="content-box">
             <div class="content-header">
                 <div class="rhythm-title" id="txt-title">NSR</div>

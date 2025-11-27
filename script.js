@@ -1,47 +1,39 @@
 // =================================================
 // 1. GLOBAL & DATABASE CHECK
 // =================================================
-// 強制相容檢查：確保能抓到資料庫
 let DATA = null;
 if (typeof ECG_DATABASE !== 'undefined') {
     DATA = ECG_DATABASE;
 } else if (typeof DB !== 'undefined') {
     DATA = DB;
 } else {
-    alert("嚴重錯誤：找不到資料庫 (data.js)。請確保該檔案存在且變數名稱正確。");
+    alert("嚴重錯誤：找不到資料庫 (data.js)。請確認該檔案存在。");
 }
 
-// 變數宣告
 let curKey = 'nsr';
 let joules = 200, isCharging = false, isReady = false;
 let shockFx = 0, adenosineFx = 0;
-let animTimers = []; // 用來管理所有 setTimeout，切換時清除
+let animTimers = []; 
 
-// Canvas 設定
 const canvas = document.getElementById('ecgCanvas');
 const ctx = canvas.getContext('2d');
-let x = 0;
-let speed = 1.5;
-let lastY = 150;
+let x = 0, speed = 1.5, lastY = 150;
 
 // =================================================
 // 2. INITIALIZATION
 // =================================================
 window.addEventListener('DOMContentLoaded', () => {
-    // 顯示登入者
     const user = localStorage.getItem('ecg_username');
     if (user) {
         const badge = document.getElementById('user-staff-badge');
-        if (badge) badge.innerHTML = `Staff: <strong>${user}</strong>`;
         const modalName = document.getElementById('modal-user-name');
-        if (modalName) modalName.innerText = user;
+        if(badge) badge.innerHTML = `Staff: <strong>${user}</strong>`;
+        if(modalName) modalName.innerText = user;
     }
 
-    // 調整 Canvas 大小
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    // 啟動程式
     if (DATA) {
         loadCase('nsr');
         draw();
@@ -65,182 +57,170 @@ function loadCase(k) {
 
     curKey = k;
     resetDefib();
-
-    // 清除所有舊的動畫計時器
+    
     animTimers.forEach(id => clearTimeout(id));
     animTimers = [];
 
-    // 1. 更新側邊欄按鈕狀態
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     const btn = document.querySelector(`.nav-btn[onclick="loadCase('${k}')"]`);
     if (btn) btn.classList.add('active');
 
-    // 2. 讀取資料
     const d = DATA[k];
-
-    // 3. 更新文字與數值
     updateVitalsUI(d);
     
-    const titleEl = document.getElementById('txt-title');
-    if(titleEl) titleEl.innerText = d.t;
-    
-    const tagEl = document.getElementById('txt-tag');
-    if(tagEl) {
-        tagEl.innerText = d.b;
-        tagEl.style.background = d.c;
+    if(document.getElementById('txt-title')) document.getElementById('txt-title').innerText = d.t;
+    if(document.getElementById('txt-tag')) {
+        document.getElementById('txt-tag').innerText = d.b;
+        document.getElementById('txt-tag').style.background = d.c;
     }
 
     fill('list-criteria', d.cri);
     fill('list-rx', d.rx);
     fill('list-nurse', d.n);
     fill('list-causes', d.cause);
-    
-    const pathoEl = document.getElementById('txt-patho');
-    if(pathoEl) pathoEl.innerText = d.patho;
+    if(document.getElementById('txt-patho')) document.getElementById('txt-patho').innerText = d.patho;
 
-    // 4. 警示框
     const alertBox = document.getElementById('alert-box');
     if (alertBox) {
         if (d.shock) {
             alertBox.style.display = 'block';
-            alertBox.style.backgroundColor = 'rgba(255, 152, 0, 0.2)';
+            alertBox.style.backgroundColor = 'rgba(255, 152, 0, 0.15)';
             alertBox.style.border = '2px solid #ff9800';
             alertBox.style.color = '#ff9800';
-            alertBox.innerHTML = "⚡ SHOCKABLE (可電擊)";
+            alertBox.innerHTML = "⚡ SHOCKABLE RHYTHM (建議電擊)";
         } else if (k === 'pea' || k === 'asystole') {
             alertBox.style.display = 'block';
-            alertBox.style.backgroundColor = 'rgba(244, 67, 54, 0.2)';
+            alertBox.style.backgroundColor = 'rgba(244, 67, 54, 0.15)';
             alertBox.style.border = '2px solid #f44336';
             alertBox.style.color = '#f44336';
-            alertBox.innerHTML = "⛔ NON-SHOCKABLE (不可電擊 - CPR Only)";
+            alertBox.innerHTML = "⛔ NON-SHOCKABLE (僅 CPR/給藥)";
         } else {
             alertBox.style.display = 'none';
         }
     }
 
-    // 5. 啟動解剖動畫
     runAnatomyLoop(d.vis);
 }
 
 // =================================================
-// 4. HEART ANATOMY ANIMATION (FIXED)
+// 4. HEART ANIMATION LOGIC (全新修正)
 // =================================================
 function runAnatomyLoop(type) {
-    // 重置所有樣式
-    const ids = ['node-sa', 'node-av', 'path-atria', 'path-vent', 'heart-muscle'];
-    ids.forEach(id => {
+    // Reset All
+    const elements = ['node-sa', 'node-av', 'path-atria', 'path-vent', 'heart-muscle'];
+    elements.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            el.classList.remove('active-node', 'active-path', 'mech-fail');
+            el.classList.remove('active-node', 'flowing', 'mech-fail');
             el.style.animation = 'none';
-            el.style.opacity = '0.3'; // 恢復暗淡
         }
     });
-
     ['vis-block', 'vis-psvt', 'vis-tdp'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
+    if(document.getElementById('anatomy-text')) document.getElementById('anatomy-text').innerText = "";
 
-    const txt = document.getElementById('anatomy-text');
-    if(txt) txt.innerText = "";
-
-    // 定義動畫序列
+    // Animation Sequence
     const sequence = () => {
+        // 1. 正常傳導 / 緩脈 / PEA
         if (type === 'nsr' || type === 'sb' || type === 'pea') {
-            const rate = (type === 'sb') ? 1300 : 800;
+            const rate = (type === 'sb') ? 1300 : 900;
             
-            // SA Node 亮
-            activate('node-sa', 100);
+            // Step 1: SA Node Firing (0ms)
+            activateNode('node-sa', 100);
             
-            // 50ms 後: 心房路徑亮
-            schedule(() => activate('path-atria', 150), 50);
+            // Step 2: Atrial Path Flow (50ms)
+            schedule(() => activatePath('path-atria'), 50);
             
-            // 200ms 後: AV Node 亮
-            schedule(() => activate('node-av', 150), 200);
+            // Step 3: AV Node Firing (250ms - slight delay)
+            schedule(() => activateNode('node-av', 150), 250);
             
-            // 350ms 後: 心室路徑亮 + 心肌收縮
+            // Step 4: Ventricular Path Flow (300ms)
             schedule(() => {
-                activate('path-vent', 200);
+                activatePath('path-vent');
                 if (type !== 'pea') pulseMuscle();
             }, 350);
 
-            if (type === 'pea') {
-                const m = document.getElementById('heart-muscle');
-                if(m) m.classList.add('mech-fail');
-            }
-
-            schedule(sequence, rate); // 循環
+            if (type === 'pea') document.getElementById('heart-muscle').classList.add('mech-fail');
+            schedule(sequence, rate);
         }
+        // 2. 傳導阻滯 (Blocks)
         else if (type && type.includes('block')) {
             const blockEl = document.getElementById('vis-block');
             if(blockEl) blockEl.style.display = 'block';
             
-            activate('node-sa', 100);
-            schedule(() => activate('path-atria', 150), 50);
+            activateNode('node-sa', 100);
+            schedule(() => activatePath('path-atria'), 50);
             
             if (type === 'avb1') {
-                schedule(() => activate('node-av', 150), 450); // 延遲久一點
-                schedule(() => { activate('path-vent', 200); pulseMuscle(); }, 600);
-            } else if(type === 'avb3') {
-                // AVB3: AV node 偶爾自己跳，不跟上面同步
-                schedule(() => activate('node-av', 100), 500); 
+                // 延長 PR: AV 較晚亮
+                schedule(() => activateNode('node-av', 150), 500);
+                schedule(() => { activatePath('path-vent'); pulseMuscle(); }, 650);
+            } else if (type === 'avb3') {
+                // 房室分離: AV node 獨立跳動
+                schedule(() => activateNode('node-av', 150), 600); 
+                schedule(() => { activatePath('path-vent'); pulseMuscle(); }, 750);
             }
-            
-            schedule(sequence, 1000);
+            schedule(sequence, 1100);
         }
+        // 3. 快速心律 (PSVT / Flutter)
         else if (type === 'psvt' || type === 'afl') {
-            const psvtEl = document.getElementById('vis-psvt');
-            if(psvtEl) psvtEl.style.display = 'block';
-            pulseMuscle(300);
+            document.getElementById('vis-psvt').style.display = 'block';
+            pulseMuscle(300); // 快縮
             schedule(sequence, 350);
         }
-        else if (type === 'vf' || type === 'vt_pulse' || type === 'vt_pulseless' || type === 'tdp') {
-            if (type === 'tdp') {
-                const tdpEl = document.getElementById('vis-tdp');
-                if(tdpEl) tdpEl.style.display = 'block';
-            }
-            activate('path-vent', 100);
-            if (type === 'vt_pulse') pulseMuscle(300);
-            schedule(sequence, (type === 'vf') ? 200 : 400);
+        // 4. 室性心律 (VT / VF)
+        else if (type && (type.includes('vt') || type === 'vf' || type === 'tdp')) {
+            if (type === 'tdp') document.getElementById('vis-tdp').style.display = 'block';
+            
+            // 逆向或亂流：直接亮心室路徑
+            activatePath('path-vent'); 
+            if (type.includes('vt')) pulseMuscle(300);
+            schedule(sequence, (type === 'vf') ? 200 : 450);
         }
     };
 
-    sequence(); // 啟動第一輪
+    sequence();
 }
 
-// 點亮元件 helper
-function activate(id, duration) {
+function activateNode(id, duration) {
     const el = document.getElementById(id);
     if (el) {
-        const cls = id.includes('path') ? 'active-path' : 'active-node';
-        el.classList.add(cls);
-        setTimeout(() => el.classList.remove(cls), duration);
+        el.classList.add('active-node');
+        setTimeout(() => el.classList.remove('active-node'), duration);
     }
 }
 
-// 心肌收縮 helper
+function activatePath(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        // 移除並重新加入 class 以重啟 CSS 動畫
+        el.classList.remove('flowing');
+        void el.offsetWidth; // Trigger reflow
+        el.classList.add('flowing');
+    }
+}
+
 function pulseMuscle(dur = 200) {
     const m = document.getElementById('heart-muscle');
     if (m) {
         m.style.transition = `transform ${dur / 2}ms`;
-        m.style.transform = 'scale(0.95)';
+        m.style.transform = 'scale(0.96)';
         setTimeout(() => m.style.transform = 'scale(1)', dur / 2);
     }
 }
 
-// 安全的 setTimeout
 function schedule(fn, ms) {
     const id = setTimeout(fn, ms);
     animTimers.push(id);
 }
 
 // =================================================
-// 5. ECG WAVEFORM DRAWING
+// 5. ECG WAVEFORM
 // =================================================
 function getWaveY(time) {
     const centerY = canvas.height / 2;
-    
     if (shockFx > 0) { shockFx--; return centerY + (Math.random() - 0.5) * 500; }
     if (adenosineFx > 0) { adenosineFx--; return centerY + (Math.random() - 0.5) * 5; }
 
@@ -250,49 +230,41 @@ function getWaveY(time) {
     if (['nsr', 'sb', 'pea', 'avb1'].includes(curKey)) {
         const rate = (curKey === 'sb') ? 1300 : 850;
         const phase = t % rate;
-        
-        // P Wave
-        y += gaussian(phase, 100, 30, -8); 
-        
-        // QRS Complex
+        // P
+        y += gaussian(phase, 100, 30, -8);
+        // QRS
         if (phase > 230 && phase < 270) {
-            y += (phase > 248 && phase < 252) ? 50 : -15; 
+            y += (phase > 248 && phase < 252) ? 50 : -15;
             if (phase > 240 && phase < 260) y += (phase % 2 === 0) ? -40 : 40;
         }
-        
-        // T Wave
+        // T
         y += gaussian(phase, 450, 60, -12);
     } 
     else if (curKey === 'vf') {
-        y += Math.sin(t * 0.01) * 20 + Math.sin(t * 0.03) * 15 + (Math.random() - 0.5) * 10;
+        y += Math.sin(t * 0.01) * 20 + Math.sin(t * 0.03) * 15 + (Math.random()-0.5)*10;
     } 
     else if (curKey.includes('vt')) {
-        const phase = t % 350;
-        y += Math.sin(phase / 350 * Math.PI * 2) * 60;
+        y += Math.sin((t % 350) / 350 * Math.PI * 2) * 60;
     } 
     else if (curKey === 'asystole') {
         y += (Math.random() - 0.5) * 2;
     } 
     else {
-        // Default Noise
         y += (Math.random() - 0.5) * 5;
     }
-
     return centerY + y;
 }
 
-function gaussian(x, c, w, h) {
-    return h * Math.exp(-Math.pow(x - c, 2) / (2 * w * w));
-}
+function gaussian(x, c, w, h) { return h * Math.exp(-Math.pow(x - c, 2) / (2 * w * w)); }
 
 function draw() {
-    // 抓取當前主題的顏色
+    // 配合主題顏色
     let style = getComputedStyle(document.body);
-    let bg = style.getPropertyValue('--bg-monitor').trim() || '#000';
-    let waveColor = getComputedStyle(document.documentElement).getPropertyValue('--c-hr').trim() || '#0f0';
+    let bg = style.getPropertyValue('--bg-monitor').trim();
+    let waveColor = getComputedStyle(document.documentElement).getPropertyValue('--c-hr').trim();
 
     ctx.fillStyle = bg;
-    ctx.fillRect(x, 0, 8, canvas.height); // 擦除
+    ctx.fillRect(x, 0, 8, canvas.height); 
 
     ctx.beginPath();
     ctx.strokeStyle = waveColor;
@@ -306,15 +278,12 @@ function draw() {
 
     lastY = y;
     x += speed;
-    if (x >= canvas.width) {
-        x = 0;
-        ctx.beginPath();
-    }
+    if (x >= canvas.width) { x = 0; ctx.beginPath(); }
     requestAnimationFrame(draw);
 }
 
 // =================================================
-// 6. UTILITIES & INTERACTIONS
+// 6. UTILS & INTERACTION
 // =================================================
 function updateVitalsUI(d) {
     if(document.getElementById('val-sys')) document.getElementById('val-sys').innerText = d.sys;
@@ -359,10 +328,8 @@ function toggleNIBP() {
 function giveDrug(d) {
     const log = document.getElementById('med-log');
     const div = document.createElement('div');
-    div.className = 'log-item';
-    div.innerText = `💉 Give ${d.toUpperCase()}`;
-    log.appendChild(div);
-    setTimeout(() => div.remove(), 4000);
+    div.className = 'log-item'; div.innerText = `💉 Give ${d.toUpperCase()}`;
+    log.appendChild(div); setTimeout(()=>div.remove(), 4000);
     if (d === 'adenosine' && curKey === 'psvt') setTimeout(() => loadCase('nsr'), 2000);
 }
 

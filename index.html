@@ -3,32 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECG Pro V11.0 (Ultimate)</title>
+    <title>ECG Pro V11.0 - Ultimate Fix</title>
     <link rel="stylesheet" href="style.css">
-    <!-- 🔒 警衛機制 -->
+    
+    <!-- 🔒 安全檢查 -->
     <script>
-        if (!localStorage.getItem('ecg_username')) { window.location.replace('login.html'); }
+        if (!localStorage.getItem('ecg_username')) {
+            window.location.replace('login.html');
+        }
     </script>
 </head>
 <body>
 
 <aside>
     <div class="brand">
-        <span>⚡ ECG Pro</span>
+        <span>⚡ ER TRACE</span>
         <span class="ver-badge">V11.0</span>
     </div>
     
-    <!-- 主題選擇器 (新增) -->
+    <!-- 主題切換 -->
     <div class="theme-selector">
-        <label>🎨 介面風格</label>
+        <label>🎨 介面風格 (Theme)</label>
         <select id="theme-select" onchange="changeTheme(this.value)">
-            <option value="dark">經典深色 (Default)</option>
+            <option value="dark">經典深色 (Dark)</option>
             <option value="light">臨床明亮 (Light)</option>
             <option value="retro">復古監測 (Retro)</option>
             <option value="cyber">賽博龐克 (Cyber)</option>
         </select>
     </div>
 
+    <!-- 導航選單 -->
     <div class="nav-scroll">
         <div class="nav-category">Sinus (竇性)</div>
         <div class="nav-btn active" onclick="loadCase('nsr')"><span>NSR 正常竇性</span><div class="dot norm"></div></div>
@@ -62,21 +66,28 @@
 </aside>
 
 <main>
-    <!-- 上半部：監視器與控制 -->
+    <!-- 上方監視器區塊 -->
     <div class="top-deck">
         <!-- 左：監視器畫面 -->
         <div class="monitor-frame">
             <div class="monitor-screen">
                 <div class="ecg-grid"></div>
                 <div class="flash-overlay" id="screen-flash"></div>
+                
+                <!-- 覆蓋層資訊 -->
                 <div class="monitor-overlay">
                     <div class="monitor-header">LEAD II <span class="monitor-mode">Monitor Mode</span></div>
                     <div id="user-staff-badge">Staff: --</div>
                 </div>
+                
+                <!-- 藥物紀錄 -->
                 <div class="med-log" id="med-log"></div>
+                
+                <!-- 畫布 -->
                 <canvas id="ecgCanvas"></canvas>
             </div>
-            <!-- 數值面板 (整合在螢幕右側) -->
+
+            <!-- 右：數值面板 -->
             <div class="vitals-panel">
                 <div class="vital-row c-hr"><span class="lbl">HR</span><span class="val" id="val-hr">--</span><span class="unit">bpm</span></div>
                 <div class="vital-row c-bp">
@@ -89,7 +100,7 @@
             </div>
         </div>
 
-        <!-- 右：控制台 -->
+        <!-- 最右：控制面板 -->
         <div class="control-panel">
             <div class="defib-section">
                 <div class="lcd-display"><span id="joule-val">200</span> J</div>
@@ -101,42 +112,42 @@
             <div class="meds-section">
                 <div class="section-title">ACLs Meds</div>
                 <div class="meds-grid">
-                    <button class="drug-btn d-epi" onclick="giveDrug('epi')">Epinephrine <span>1mg</span></button>
-                    <button class="drug-btn d-amio" onclick="giveDrug('amio')">Amiodarone <span>150mg</span></button>
-                    <button class="drug-btn d-aden" onclick="giveDrug('adenosine')">Adenosine <span>6mg</span></button>
-                    <button class="drug-btn d-atro" onclick="giveDrug('atropine')">Atropine <span>1mg</span></button>
-                    <button class="drug-btn d-mag" onclick="giveDrug('mag')">Magnesium <span>2g</span></button>
+                    <button class="drug-btn d-epi" onclick="giveDrug('epi')">Epi <span>1mg</span></button>
+                    <button class="drug-btn d-amio" onclick="giveDrug('amio')">Amio <span>150mg</span></button>
+                    <button class="drug-btn d-aden" onclick="giveDrug('adenosine')">Adeno <span>6mg</span></button>
+                    <button class="drug-btn d-atro" onclick="giveDrug('atropine')">Atro <span>1mg</span></button>
+                    <button class="drug-btn d-mag" onclick="giveDrug('mag')">Mag <span>2g</span></button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 下半部：教學區 -->
+    <!-- 下方教學區塊 -->
     <div class="edu-container">
-        <!-- 解剖圖 -->
+        <!-- 解剖動畫 -->
         <div class="anatomy-box">
             <div class="box-header">Pathology View</div>
             <svg class="heart-svg" viewBox="0 0 300 350">
-                <!-- 心肌底圖 -->
+                <!-- 1. 心肌 -->
                 <path id="heart-muscle" class="path-heart" d="M150 330 C 50 300, 20 180, 20 120 C 20 60, 80 20, 150 90 C 220 20, 280 60, 280 120 C 280 180, 250 300, 150 330 Z" />
                 
-                <!-- 傳導路徑 (關鍵動畫修改) -->
+                <!-- 2. 傳導路徑 (關鍵ID) -->
                 <path id="path-atria" class="path-conduction" d="M80 80 Q 115 110 150 140" />
                 <path id="path-vent" class="path-conduction" d="M150 140 L 150 190 L 100 260 M 150 190 L 200 260" />
                 
-                <!-- 節點 -->
+                <!-- 3. 節點 -->
                 <circle id="node-sa" class="node" cx="80" cy="80" r="8" />
                 <circle id="node-av" class="node" cx="150" cy="140" r="6" />
                 
-                <!-- 特殊狀態圖示 -->
+                <!-- 4. 特殊圖示 -->
                 <rect id="vis-block" class="block-bar" x="135" y="145" width="30" height="8" rx="2" />
-                <circle id="vis-psvt" cx="150" cy="140" r="15" class="reentry-ring" />
+                <circle id="vis-psvt" cx="150" cy="140" r="15" class="reentry-ring" style="display:none;"/>
                 <g id="vis-tdp" style="display:none;">
                     <circle class="flash-dot" cx="120" cy="220" r="6" />
                     <circle class="flash-dot" cx="180" cy="250" r="6" style="animation-delay:0.2s"/>
                 </g>
             </svg>
-            <p id="anatomy-text">Normal Conduction</p>
+            <p id="anatomy-text" style="color:var(--text-muted); font-size:0.8rem; margin-top:10px;">Normal</p>
         </div>
 
         <!-- 文字內容 -->
@@ -157,13 +168,13 @@
                 </div>
                 <div id="tab-patho" class="tab-content">
                     <p id="txt-patho"></p>
-                    <h4>常見成因</h4>
+                    <h4 style="color:var(--c-hr); margin-top:10px;">常見成因</h4>
                     <ul id="list-causes"></ul>
                 </div>
                 <div id="tab-rx" class="tab-content">
-                    <h4>ACLS 建議</h4>
+                    <h4 style="color:var(--c-hr);">ACLS 建議</h4>
                     <ul id="list-rx"></ul>
-                    <h4>護理重點</h4>
+                    <h4 style="color:var(--c-hr); margin-top:10px;">護理重點</h4>
                     <ul id="list-nurse"></ul>
                 </div>
             </div>
@@ -178,13 +189,15 @@
         <div class="modal-body">
             <p><strong>ECG Pro Simulator V11.0</strong></p>
             <p>Current User: <span id="modal-user-name">--</span></p>
-            <hr>
+            <hr style="border:0; border-top:1px solid #333; margin:10px 0;">
             <p style="font-size:0.8rem; opacity:0.7;">僅供教學使用，非醫療器材。</p>
         </div>
     </div>
 </div>
 
+<!-- 載入順序很重要 -->
 <script src="data.js"></script>
 <script src="script.js"></script>
+
 </body>
 </html>

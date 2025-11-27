@@ -1,44 +1,42 @@
-/* ================= SYSTEM GLOBALS ================= */
-let DATA = null; 
-// 等待 Data.js 載入
-if(typeof ECG_DATABASE !== 'undefined') DATA = ECG_DATABASE;
-else console.error("Database missing!");
+/* ================= GLOBAL & DATA CHECK ================= */
+let DATA = (typeof ECG_DATABASE !== 'undefined') ? ECG_DATABASE : (typeof DB !== 'undefined' ? DB : null);
+if(!DATA) console.error("Database Not Found!");
 
+// 核心變數
 let curKey = 'nsr';
-let isReady=false, isCharging=false, energy=200;
-let shockFx=0, drugFx=0;
-let nibpTimer;
-let animTimer; // 用於心臟動畫的 Timer
+let isReady=false, isCharging=false;
+let shockFx=0, drugFx=0; // 特效計數器
+let animTimers = [];     // 存放動畫Timer以便清除
 
 const cvs = document.getElementById('ecgCanvas');
 const ctx = cvs.getContext('2d');
 let x=0, speed=1.5, lastY=150;
-let nextBeatTime = 0; // 用於 Afib 計算
+
+// 波形參數
+let nextBeat = 0; 
 
 /* ================= INIT ================= */
 window.addEventListener('DOMContentLoaded', () => {
     // 登入者
     const u = localStorage.getItem('ecg_username');
-    if(u) document.getElementById('staff-name').innerText = "Staff: " + u;
+    if(u) {
+        document.getElementById('user-display').innerText = "Staff: "+u;
+        document.getElementById('modal-user').innerText = u;
+    }
 
-    // 建置選單
-    buildMenu();
-
-    // 啟動
     resize();
     window.addEventListener('resize', resize);
-    
-    // 滑鼠 Hover 效果
-    setupHover();
+    setupHover(); // SVG 互動
 
+    // 啟動預設
     if(DATA) {
         loadCase('nsr');
-        draw();
-        setInterval(fluctuate, 2000);
+        draw(); 
+        setInterval(fluctuateVitals, 2000); // 讓數字稍微跳動
     }
 });
 
-function resize(){
+function resize() {
     if(cvs.parentElement) {
         cvs.width = cvs.parentElement.clientWidth;
         cvs.height = cvs.parentElement.clientHeight;
@@ -46,264 +44,194 @@ function resize(){
     }
 }
 
-/* ================= MENU GENERATION ================= */
-function buildMenu() {
-    // 簡單將 Key 分組顯示 (範例：只顯示資料庫中有的)
-    // 實際應用中可像之前那樣 Hardcode HTML 分類
-    const menu = document.getElementById('menu');
-    // 如果您保留了 HTML 中的 menu 內容，這段可略過。
-    // 如果是動態：
-    let html = '';
-    const groups = {
-        'Sinus': ['nsr', 'sb'],
-        'Atrial': ['afib', 'afl', 'psvt'],
-        'Ventricular': ['vt', 'vf', 'pvc', 'pvt'],
-        'Blocks': ['avb1', 'avb3', 'pea', 'asystole']
-    };
-    // 簡單遍歷
-    if(menu.innerHTML.trim() === '') {
-        // (省略自動生成邏輯，請沿用 Index.html 手寫的分類以求美觀)
-    }
-}
-
-/* ================= LOAD LOGIC ================= */
+/* ================= LOAD CASE LOGIC ================= */
 function loadCase(k) {
-    if(!DATA[k]) return;
+    if(!DATA || !DATA[k]) return;
     curKey = k;
     
-    // UI Update
+    // 清除動畫 Timer
+    animTimers.forEach(t=>clearTimeout(t)); animTimers=[];
+    
+    // 更新選單 Highlighting
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    // (需手動在 HTML onclick 加 this, 或此處略過 UI highlight)
+    // (需要靠 onclick 觸發 CSS 變更)
+    const clickedBtn = document.querySelector(`.nav-btn[onclick="loadCase('${k}')"]`);
+    if(clickedBtn) clickedBtn.classList.add('active');
 
     const d = DATA[k];
     
-    // Text Info
+    // 1. 文字資訊
     document.getElementById('txt-title').innerText = d.t;
-    const tag = document.getElementById('txt-tag');
-    tag.innerText = d.b; tag.style.background = d.c;
-    
-    fill('list-cri', d.cri); fill('list-rx', d.rx);
+    document.getElementById('txt-tag').innerText = d.b;
+    document.getElementById('txt-tag').style.background = d.c;
+    fill('list-cri', d.cri); fill('list-rx', d.rx); 
     fill('list-cause', d.cause); fill('list-nur', d.n);
     document.getElementById('txt-patho').innerText = d.patho;
 
-    // Vitals
+    // 2. Vitals (NIBP 除外)
     setVal('val-hr', d.hr); setVal('val-spo2', d.spo2);
     setVal('val-rr', d.rr); setVal('val-temp', d.temp);
-    // NIBP 歸零或保持 (依照臨床，換病人應歸零)
-    document.getElementById('val-sys').innerText = '--';
-    document.getElementById('val-dia').innerText = '--';
-
-    // Alerts
-    const ab = document.getElementById('alert-box');
-    ab.style.display = 'none';
+    
+    // 3. Alert
+    const box = document.getElementById('alert-banner');
     if(d.shock) {
-        ab.style.display='block'; ab.innerText="⚡ SHOCKABLE RHYTHM"; 
-        ab.style.borderColor="orange"; ab.style.color="orange";
-    } else if (['asystole','pea','pvt'].includes(k)) {
-        ab.style.display='block'; ab.innerText="⛔ NON-SHOCKABLE";
-        ab.style.borderColor="red"; ab.style.color="red";
+        box.style.display='block'; box.innerHTML="⚡ SHOCKABLE RHYTHM"; 
+        box.style.borderColor="orange"; box.style.color="orange"; box.style.background="rgba(255,165,0,0.1)";
+    } else if (['pea','pvt','asystole','asys'].includes(k)) {
+        box.style.display='block'; box.innerHTML="⛔ NON-SHOCKABLE";
+        box.style.borderColor="red"; box.style.color="red"; box.style.background="rgba(255,0,0,0.1)";
+    } else {
+        box.style.display='none';
     }
 
+    // 4. 重置電擊器
+    isReady=false; isCharging=false;
+    document.getElementById('btn-chg').innerText="CHARGE";
+    const sb = document.getElementById('btn-shk'); sb.disabled=true; sb.classList.remove('ready');
+
+    // 5. 執行心臟動畫
     animateHeart(d.vis);
-    resetDefib();
 }
 
-/* ================= HEART ANATOMY (CORRECTED) ================= */
+/* ================= ANIMATION (SA -> Path -> AV -> Vent) ================= */
 function animateHeart(type) {
-    // 1. 清除舊的計時器
-    if(animTimer) clearInterval(animTimer);
-    
-    // 2. 重置樣式
-    ['node-sa','node-av','path-sa-av','path-his','path-branches'].forEach(id=>{
+    // Reset Classes
+    ['n-sa','n-av','p-internodal','p-his','p-branches'].forEach(id=>{
         const el = document.getElementById(id);
-        if(el) {
-            el.classList.remove('active'); 
-            // 針對 path class:
-            if(id.includes('path')) el.classList.remove('active'); 
-        }
+        if(el) { el.classList.remove('active','flowing'); el.style.opacity='0.2'; }
     });
-    
-    document.getElementById('vis-block').style.display = 'none';
-    document.getElementById('vis-reentry').style.display = 'none';
+    document.getElementById('vis-reentry').style.display='none';
+    document.getElementById('vis-block').style.display='none';
 
-    // 3. 定義 Sequence
-    const runSeq = () => {
-        // NSR / Brady / PEA: 正常順序 SA->Internodal->AV->His->Purkinje
+    // Sequence Generator
+    const seq = () => {
+        // --- 正常 / 緩脈 / PEA ---
         if(['nsr','sb','pea'].includes(type) || type==='avb1') {
-            const rate = (type==='sb') ? 1300 : 900;
+            let rate = (type==='sb') ? 1300 : 900;
             
-            highlight('node-sa', 100);
+            flash('n-sa', 150); // 1. SA Node
             
-            setTimeout(()=> activatePath('path-sa-av'), 50);
+            setTimeout(()=> flow('p-internodal'), 50); // 2. Internodal
             
             setTimeout(()=> {
-                highlight('node-av', 150);
-                if(type==='avb1') {} // AVB1 is just delay, visualize delay by holding here?
+                flash('n-av', 150); // 3. AV Node
+                // AVB1 delay block bar visual (optional, skip for simplicity)
             }, 250); 
             
-            setTimeout(()=> activatePath('path-his'), 400 + (type==='avb1'?200:0));
+            setTimeout(()=> flow('p-his'), 400 + (type==='avb1'?200:0)); // 4. His
             
-            setTimeout(()=> activatePath('path-branches'), 450 + (type==='avb1'?200:0));
+            setTimeout(()=> {
+                flow('p-branches'); // 5. Ventricles
+                if(type!=='pea') thump(); 
+            }, 450 + (type==='avb1'?200:0));
             
-            animTimer = setTimeout(runSeq, rate);
+            animTimers.push(setTimeout(seq, rate));
         }
-        else if(type==='afib') {
-            // AFib: AV 隨機亮，路徑亂閃 (簡化：AV 亮 -> 下傳)
-            highlight('node-av', 100);
-            activatePath('path-his');
-            activatePath('path-branches');
-            animTimer = setTimeout(runSeq, 400 + Math.random()*400); // Irregular
-        }
-        else if(type==='psvt') {
-            document.getElementById('vis-reentry').style.display='block';
-            activatePath('path-branches');
-            animTimer = setTimeout(runSeq, 300);
-        }
-        else if(['vt','vf'].includes(type)) {
-            // 心室自主：從下面亮上來，或者只有下面亮
-            activatePath('path-branches');
-            animTimer = setTimeout(runSeq, type==='vf'?200:450);
-        }
-        else if(type==='avb3') {
-            // AV Dissociation: Atria fire independently
-            highlight('node-sa', 100);
-            setTimeout(()=>activatePath('path-sa-av'), 50);
-            // Ventricle fire slow independently
-            // This is hard to animate in one loop without complex async.
-            // Simplified: visualize the block bar
+        // --- Block (AVB3) ---
+        else if(type.includes('avb3')) { // Dissociation
+            flash('n-sa', 100); 
+            // Randomly fire vents separate
+            if(Math.random()>0.5) { flash('n-av',100); flow('p-branches'); thump(); }
             document.getElementById('vis-block').style.display='block';
-            animTimer = setTimeout(runSeq, 800);
+            animTimers.push(setTimeout(seq, 1000));
+        }
+        // --- AFib ---
+        else if(type==='afib') {
+            flash('n-av', 100); // AV firing irregularly
+            flow('p-branches');
+            thump();
+            animTimers.push(setTimeout(seq, 400 + Math.random()*400));
+        }
+        // --- VT/VF ---
+        else if(['vt','vf','pvt'].includes(type)) {
+            flow('p-branches'); // Retrograde
+            if(type.includes('vt')) thump();
+            animTimers.push(setTimeout(seq, (type==='vf')?200:450));
+        }
+        // --- PSVT ---
+        else if(type==='psvt' || type==='afl') {
+            document.getElementById('vis-reentry').style.display='block';
+            thump();
+            animTimers.push(setTimeout(seq, 320));
         }
     };
-    runSeq();
+    seq();
 }
 
-// 動畫 Helper
-function highlight(id, ms) {
-    const el = document.getElementById(id);
+// Helpers for Animation
+function flash(id, ms) { 
+    const el=document.getElementById(id); 
+    if(el){el.classList.add('active'); el.style.opacity='1'; setTimeout(()=>el.classList.remove('active'), ms);} 
+}
+function flow(id) { 
+    const el=document.getElementById(id); 
     if(el){
-        el.classList.add('active');
-        setTimeout(()=>el.classList.remove('active'), ms);
-    }
+        el.classList.remove('flowing'); void el.offsetWidth; 
+        el.classList.add('flowing'); el.style.opacity='1';
+    } 
 }
-function activatePath(id) {
-    const el = document.getElementById(id);
-    if(el) {
-        el.classList.remove('active');
-        void el.offsetWidth; // force reflow
-        el.classList.add('active');
-    }
+function thump() { 
+    const m=document.getElementById('h-muscle'); 
+    if(m) { m.classList.remove('muscle-pump'); void m.offsetWidth; m.classList.add('muscle-pump'); } 
 }
 
-// Hover Interaction
-function setupHover() {
-    const tip = document.getElementById('anat-tip');
-    document.querySelectorAll('.node, .path-wire').forEach(el => {
-        el.addEventListener('mouseenter', ()=> {
-            tip.innerText = el.getAttribute('data-name');
-            tip.style.color = "var(--c-spo2)";
-        });
-        el.addEventListener('mouseleave', ()=> {
-            tip.innerText = "Interactive Heart View";
-            tip.style.color = "#aaa";
-        });
-    });
-}
+/* ================= WAVEFORM DRAWING (REALISTIC) ================= */
+function getWaveY(t) {
+    const cy = cvs.height/2;
+    if(shockFx>0) { shockFx--; return cy + (Math.random()-0.5)*500; } // Shock noise
+    if(drugFx>0)  { drugFx--; return cy + (Math.random()-0.5)*2; }   // Flatline effect
 
-/* ================= ECG & NIBP ================= */
-// NIBP: 按下 -> 模擬測量 -> 隨機值
-function runNIBP() {
-    const btn = document.getElementById('btn-nibp');
-    if(btn.innerText.includes('測量')) {
-        btn.innerText = "Measuring...";
-        btn.classList.add('running');
-        document.getElementById('val-sys').innerText = "---";
-        document.getElementById('val-dia').innerText = "---";
-        
-        setTimeout(() => {
-            btn.innerText = "測量 (Start)";
-            btn.classList.remove('running');
-            const d = DATA[curKey];
-            if(d.sys !== '---') {
-                const s = parseInt(d.sys) + Math.floor(Math.random()*16)-8;
-                const dia = parseInt(d.dia) + Math.floor(Math.random()*10)-5;
-                document.getElementById('val-sys').innerText = s;
-                document.getElementById('val-dia').innerText = dia;
-            } else {
-                document.getElementById('val-sys').innerText = "---";
-                document.getElementById('val-dia').innerText = "---";
-            }
-        }, 3000);
-    }
-}
-
-// Waveform Logic (Smoother & Realistic)
-function getWave(t) {
-    let y = cvs.height/2;
-    if(shockFx>0) { shockFx--; return y + (Math.random()-0.5)*500; }
+    let y = 0;
     
-    // P-QRS-T Generator
-    const p_wave = (ph) => 5 * Math.exp(-Math.pow((ph-0.15)/0.03,2)); // P at 15%
-    const qrs = (ph) => {
-        // Q (-), R (+), S (-) at around 30%
-        if(ph > 0.28 && ph < 0.32) return 60 * Math.sin((ph-0.28)*Math.PI*2 / 0.04); 
-        return 0;
-    }
-    const t_wave = (ph) => 10 * Math.exp(-Math.pow((ph-0.5)/0.08,2)); // T at 50%
-
-    // 1. NSR
+    // 1. P-QRS-T Based (NSR, SB, AVB...)
     if(['nsr','sb','pea'].includes(curKey) || curKey.includes('avb')) {
-        let rate = (curKey==='sb') ? 1.2 : 0.8; // seconds per beat
-        let time = (t / 1000) % rate;
-        let phase = time / rate; // 0.0 to 1.0
+        const rate = (curKey==='sb')?1.2:0.8;
+        const phase = (t/1000)%rate;
+        const p = phase/rate; // Normalized 0-1
         
-        y -= p_wave(phase) * 3; // P up
-        
-        // QRS logic - Simplistic but looking good
-        if(phase > 0.25 && phase < 0.35) {
-            // Draw generic Sharp QRS
-            if(phase < 0.28) y += 5; // Q
-            else if (phase < 0.32) y -= 50; // R (Negative in Canvas Y is Up)
-            else y += 10; // S
+        // P wave (0.1)
+        if(Math.abs(p - 0.15) < 0.05) y -= 5 * Math.sin((p-0.1)*Math.PI*10); 
+        // QRS (0.3)
+        if(p>0.28 && p<0.32) {
+            y += Math.sin((p-0.28)*Math.PI*50) * 50; 
         }
-        
-        y -= t_wave(phase) * 2;
+        // T wave (0.5)
+        if(p>0.4 && p<0.55) {
+            y -= 8 * Math.sin((p-0.4)*Math.PI*6);
+        }
     }
-    // 2. VT (Sine)
-    else if(curKey.includes('vt')) {
-        y += Math.sin(t * 0.02) * 40; 
+    // 2. VT / pVT
+    else if(curKey.includes('vt') || curKey==='pvt') {
+        y = Math.sin(t*0.02) * 45; // Big Sine
     }
-    // 3. VF (Chaos)
-    else if(curKey === 'vf') {
-        y += Math.sin(t*0.015)*15 + Math.sin(t*0.05)*10 + (Math.random()-0.5)*10;
+    // 3. VF
+    else if(curKey==='vf') {
+        y = Math.sin(t*0.015)*15 + Math.sin(t*0.05)*8 + (Math.random()-0.5)*5;
     }
-    // 4. Flat
-    else if(curKey === 'asystole') {
-        y += (Math.random()-0.5)*2;
+    // 4. Afib (Irregular)
+    else if(curKey==='afib') {
+        // F-waves
+        y += Math.sin(t*0.05)*3 + (Math.random()-0.5)*2;
+        // Random Beat
+        if(Math.random() > 0.985) y -= 45; 
     }
-    // 5. AFib (Irregular R-R + F waves)
-    else if(curKey === 'afib') {
-        y += Math.sin(t*0.05)*3 + (Math.random()-0.5)*2; // f-waves
-        // Random Beats logic omitted for brevity, keeping simple noise here
-        if(Math.random() > 0.98) y -= 40; // Random R wave
+    else {
+        y += (Math.random()-0.5)*3; // Flatline / Noise
     }
     
-    return y;
+    return cy + y;
 }
 
 function draw() {
-    let bg = getComputedStyle(document.body).getPropertyValue('--bg-monitor').trim();
-    let col = getComputedStyle(document.documentElement).getPropertyValue('--c-hr').trim();
-    
-    ctx.fillStyle = bg;
-    ctx.fillRect(x,0,6,cvs.height); // eraser
+    // Fade / Scanbar
+    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-monitor') || '#000';
+    ctx.fillRect(x, 0, 8, cvs.height);
     
     ctx.beginPath();
-    ctx.strokeStyle = col;
+    ctx.strokeStyle = '#00ff00'; // Always Green line
     ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
     
-    let y = getWave(Date.now());
+    let y = getWaveY(Date.now());
     ctx.moveTo(x-speed, lastY);
     ctx.lineTo(x, y);
     ctx.stroke();
@@ -313,23 +241,98 @@ function draw() {
     requestAnimationFrame(draw);
 }
 
-// Helpers
-function fill(id,arr){document.getElementById(id).innerHTML = arr?arr.map(x=>`<li>${x}</li>`).join(''):'';}
-function setVal(id,v){document.getElementById(id).innerText = v;}
-function fluctuate(){
-    if(DATA[curKey].hr && typeof DATA[curKey].hr==='number') {
-        const r = Math.floor(Math.random()*3)-1;
+/* ================= NIBP LOGIC (DELAY & RANDOM) ================= */
+function runNIBP() {
+    const btn = document.getElementById('btn-nibp');
+    if(btn.innerText.includes('Start') || btn.innerText.includes('測量')) {
+        btn.innerText = "Measuring..."; btn.classList.add('active');
+        document.getElementById('val-sys').innerText = "--";
+        document.getElementById('val-dia').innerText = "--";
+        
+        setTimeout(() => {
+            btn.innerText = "START"; btn.classList.remove('active');
+            
+            const d = DATA[curKey];
+            if(d && d.sys !== "---") {
+                // Generate Value
+                const s = parseInt(d.sys) + Math.floor(Math.random()*16 - 8);
+                const dval = parseInt(d.dia) + Math.floor(Math.random()*10 - 5);
+                document.getElementById('val-sys').innerText = s;
+                document.getElementById('val-dia').innerText = dval;
+            } else {
+                document.getElementById('val-sys').innerText = "---";
+                document.getElementById('val-dia').innerText = "---";
+            }
+        }, 3000); // 3 seconds delay
+    }
+}
+
+/* ================= UTILS & HOVER ================= */
+function setupHover() {
+    const tip = document.getElementById('anat-tip');
+    document.querySelectorAll('.path-wire, .node').forEach(el => {
+        el.addEventListener('mouseenter', () => {
+            tip.innerText = el.getAttribute('data-name'); tip.style.color = "#ffff00";
+        });
+        el.addEventListener('mouseleave', () => {
+            tip.innerText = "Interactive View"; tip.style.color = "#aaa";
+        });
+    });
+}
+
+function fluctuateVitals() {
+    if(DATA && DATA[curKey].hr && typeof DATA[curKey].hr==='number') {
+        const r = Math.floor(Math.random()*3 - 1);
         document.getElementById('val-hr').innerText = DATA[curKey].hr + r;
     }
 }
-function drug(n){alert('GIVEN: '+n);}
-function showTab(n){
-    document.querySelectorAll('.content-pane').forEach(e=>e.classList.remove('active'));
-    document.getElementById('t'+n).classList.add('active');
+
+function giveDrug(n) {
+    const log = document.getElementById('med-log');
+    const d = document.createElement('div');
+    d.className='log-line'; d.innerText=`💉 Give ${n}`;
+    log.appendChild(d); setTimeout(()=>d.remove(), 4000);
+    
+    if(n.includes('Adenosine') && curKey==='psvt') {
+        setTimeout(()=>{
+            drugFx = 100; // flatline
+            setTimeout(()=>loadCase('nsr'), 1500);
+        }, 1000);
+    }
+}
+
+function charge() {
+    if(!isCharging) {
+        isCharging=true; 
+        document.getElementById('btn-chg').innerText="CHG...";
+        setTimeout(()=>{ isCharging=false; isReady=true; document.getElementById('btn-chg').innerText="READY"; document.getElementById('btn-shk').disabled=false; document.getElementById('btn-shk').classList.add('ready');}, 2000);
+    }
+}
+function shock() {
+    if(isReady) {
+        shockFx=30; 
+        document.getElementById('shock-flash').style.opacity=1; 
+        setTimeout(()=>document.getElementById('shock-flash').style.opacity=0, 200);
+        if(DATA[curKey].shock) setTimeout(()=>loadCase('nsr'), 1000);
+        else if(curKey!=='asystole') setTimeout(()=>loadCase('vf'), 1000);
+        isReady=false; document.getElementById('btn-shk').disabled=true; document.getElementById('btn-shk').classList.remove('ready'); document.getElementById('btn-chg').innerText="CHARGE";
+    }
+}
+
+function fill(id, arr) { document.getElementById(id).innerHTML = arr?arr.map(x=>`<li>${x}</li>`).join(''):''; }
+function setVal(id, v) { document.getElementById(id).innerText = v; }
+function toggleTheme(){
+    const b = document.body;
+    if(!b.getAttribute('data-theme')) b.setAttribute('data-theme', 'light');
+    else b.removeAttribute('data-theme');
+}
+function openModal(){ document.getElementById('info-modal').style.display='flex'; }
+function closeModal(){ document.getElementById('info-modal').style.display='none'; }
+function logout(){ localStorage.removeItem('ecg_username'); location.reload(); }
+// Tab switching
+function openTab(n) {
+    document.querySelectorAll('.tab-content').forEach(e=>e.style.display='none');
+    document.getElementById('t'+n).style.display='block';
     document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
     event.target.classList.add('active');
 }
-function logout(){localStorage.removeItem('ecg_username');location.href='login.html';}
-function openModal(){document.getElementById('info-modal').style.display='flex';}
-function closeModal(){document.getElementById('info-modal').style.display='none';}
-// Shock Logic same as before (omitted for brevity but add resetDefib/charge/shock from previous)

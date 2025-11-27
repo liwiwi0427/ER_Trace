@@ -2,7 +2,14 @@
     --bg-app: #0f172a; --bg-panel: #1e293b; --bg-card: #262626;
     --border-color: #334155; --text-main: #f1f5f9; --text-muted: #94a3b8;
     --btn-hover: rgba(255,255,255,0.05); --bg-monitor: #000000;
-    --c-hr: #4ade80; --c-spo2: #38bdf8; --c-bp: #f472b6; --c-rr: #facc15; --c-temp: #ffffff;
+    
+    /* 🏥 醫療級監測配色 - 嚴格依需求設定 */
+    --c-hr: #00ff00;    /* HR: 綠 */
+    --c-spo2: #0088ff;  /* SpO2: 藍 (調整為較亮的醫用藍) */
+    --c-bp: #ffffff;    /* NIBP: 白 */
+    --c-rr: #ffff00;    /* RR: 黃 */
+    --c-temp: #ff3333;  /* Temp: 紅 */
+    
     --st-norm: #4caf50; --st-warn: #ff9800; --st-crit: #f44336; --st-spec: #9c27b0;
     --drug-epi: #dca546; --drug-aden: #ef5350; --drug-amio: #42a5f5; --drug-atro: #66bb6a; --drug-mag: #ab47bc;
 }
@@ -12,135 +19,32 @@
     --border-color: #e2e8f0; --text-main: #1e293b; --text-muted: #64748b; --btn-hover: #f1f5f9;
 }
 
-* { box-sizing: border-box; user-select: none; }
+/* ... 其他 Reset, Layout, Sidebar, Monitor ... */
 
-body {
-    font-family: 'Segoe UI', 'Roboto', Helvetica, Arial, sans-serif;
-    margin: 0; display: flex; height: 100vh;
-    background-color: var(--bg-app); color: var(--text-main);
-    overflow: hidden; transition: background-color 0.3s, color 0.3s;
+/* --- Anatomy SVG Interactions (新增) --- */
+.anatomy-box { position: relative; } /* 為提示文字定位 */
+#anatomy-tooltip {
+    position: absolute; top: 10px; left: 10px;
+    background: rgba(0,0,0,0.8); color: #fff; padding: 4px 8px; 
+    border-radius: 4px; font-size: 0.8rem; display: none; pointer-events: none;
 }
 
-/* --- Layout --- */
-aside {
-    width: 240px; background: var(--bg-panel); border-right: 1px solid var(--border-color);
-    display: flex; flex-direction: column; flex-shrink: 0; transition: background 0.3s;
+.heart-svg .node, .heart-svg .path-conduction {
+    cursor: help;
+    pointer-events: all; /* 確保能觸發 hover */
+    transition: filter 0.2s;
 }
-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-
-/* --- Sidebar Elements --- */
-.brand { padding: 15px; font-size: 1.1rem; font-weight: 900; color: var(--c-hr); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-.ver-badge { font-size: 0.6rem; background: #333; color:#ccc; padding: 2px 6px; border-radius: 4px; }
-.nav-scroll { flex: 1; overflow-y: auto; padding: 10px; }
-.nav-category { font-size: 0.65rem; text-transform: uppercase; color: var(--text-muted); margin: 15px 0 5px 5px; font-weight: bold; border-bottom: 1px solid var(--border-color); }
-.nav-btn { padding: 8px 10px; margin-bottom: 2px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); border-left: 3px solid transparent; }
-.nav-btn:hover { background: var(--btn-hover); color: var(--text-main); }
-.nav-btn.active { background: #2563eb; color: white; border-left-color: #60a5fa; font-weight: 600; }
-.dot { width: 6px; height: 6px; border-radius: 50%; }
-.dot.norm { background: var(--st-norm); } .dot.warn { background: var(--st-warn); } .dot.crit { background: var(--st-crit); } .dot.spec { background: var(--st-spec); }
-.sidebar-footer { border-top: 1px solid var(--border-color); display: flex; }
-.footer-btn { flex: 1; padding: 10px; cursor: pointer; text-align: center; color: var(--text-muted); font-size: 1.2rem; }
-.footer-btn:hover { background: var(--btn-hover); color: var(--text-main); }
-
-/* --- Monitor --- */
-.top-container { flex: 0 0 420px; display: flex; background: var(--bg-monitor); border-bottom: 1px solid var(--border-color); }
-.monitor-screen { flex: 1; position: relative; background: var(--bg-monitor); overflow: hidden; border-right: 1px solid #333; }
-.ecg-grid { position: absolute; inset: 0; opacity: 0.2; background-image: linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px); background-size: 20px 20px; pointer-events: none; }
-canvas { display: block; width: 100%; height: 100%; }
-
-.monitor-overlay { position: absolute; top: 10px; left: 15px; font-family: monospace; z-index: 10; }
-.monitor-title { color: var(--c-hr); font-weight: bold; text-shadow: 0 0 5px rgba(74, 222, 128, 0.3); }
-#user-staff-badge { font-size: 0.85rem; color: var(--c-spo2); margin-top: 4px; letter-spacing: 1px; font-weight: normal; opacity: 0.9; }
-
-.med-log { position: absolute; top: 10px; right: 15px; text-align: right; pointer-events: none; display: flex; flex-direction: column; gap: 5px; z-index: 10; }
-.log-item { background: rgba(20,20,20,0.8); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; animation: fadeSlideIn 0.5s; border-left: 3px solid var(--c-hr); }
-@keyframes fadeSlideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
-
-/* --- Vitals & Controls --- */
-.vitals-panel { width: 150px; background: #080808; padding: 5px 10px; display: flex; flex-direction: column; justify-content: space-between; border-right: 1px solid #333; }
-.vital-row { display: flex; flex-direction: column; align-items: flex-end; padding: 4px 0; border-bottom: 1px solid #222; flex: 1; justify-content: center; position: relative; }
-.vital-label { font-size: 0.65rem; font-weight: bold; position: absolute; top: 2px; left: 0; opacity: 0.7; color: #ccc; }
-.vital-value { font-size: 1.8rem; font-weight: 700; line-height: 1; }
-.vital-unit { font-size: 0.6rem; opacity: 0.6; position: absolute; bottom: 2px; left: 0; color: #ccc; }
-.c-hr { color: var(--c-hr); } .c-bp { color: var(--c-bp); } .c-spo2 { color: var(--c-spo2); } .c-rr { color: var(--c-rr); } .c-temp { color: var(--c-temp); }
-.nibp-btn { width: 100%; padding: 4px; background: #333; color: #ccc; border: none; border-radius: 2px; cursor: pointer; font-size: 0.65rem; margin-top: 2px; }
-.nibp-btn.active { background: var(--c-bp); color: white; }
-
-.control-panel { width: 240px; background: #151515; display: flex; flex-direction: column; }
-.defib-section { padding: 10px; background: #1a1a1a; border-bottom: 1px solid #333; display: flex; flex-direction: column; gap: 5px; }
-.energy-lcd { background: #000; color: #b2ff59; font-family: monospace; font-size: 1.2rem; text-align: center; padding: 2px; border: 1px solid #333; border-radius: 4px; }
-.defib-btns { display: flex; gap: 5px; }
-.btn-defib { flex: 1; border: none; border-radius: 4px; padding: 8px; font-weight: bold; cursor: pointer; font-size: 0.75rem; color: white; text-transform: uppercase; }
-.btn-charge { background: #ffb300; color: black; }
-.btn-shock { background: #333; color: #666; cursor: not-allowed; }
-.btn-shock.ready { background: #d50000; color: white; animation: pulse 0.5s infinite; }
-.meds-section { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-.meds-title { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; text-align: center; margin-bottom: 5px; }
-.drug-btn { background: #2c2c2c; color: #ddd; border: none; padding: 8px; border-radius: 4px; text-align: left; cursor: pointer; font-size: 0.8rem; display: flex; justify-content: space-between; border-left: 4px solid #555; }
-.drug-btn:hover { background: #333; }
-.d-aden { border-color: var(--drug-aden); } .d-epi { border-color: var(--drug-epi); } .d-amio { border-color: var(--drug-amio); } .d-atro { border-color: var(--drug-atro); } .d-mag { border-color: var(--drug-mag); } 
-
-/* --- Education Section --- */
-.edu-container { flex: 1; padding: 20px; background: var(--bg-app); overflow: hidden; display: grid; grid-template-columns: 280px 1fr; gap: 20px; }
-.anatomy-box, .content-box { background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; }
-.anatomy-box { align-items: center; justify-content: center; padding: 20px; }
-.content-box { overflow: hidden; }
-.content-header { padding: 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-.rhythm-title { font-size: 1.2rem; font-weight: bold; }
-.rhythm-tag { font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; color: white; font-weight: bold; }
-.tabs { display: flex; background: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border-color); }
-.tab-btn { padding: 10px 20px; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; font-weight: bold; flex: 1; text-align: center; border:none; background:transparent; border-bottom: 2px solid transparent; }
-.tab-btn.active { color: #3b82f6; border-bottom-color: #3b82f6; background: rgba(59,130,246,0.05); }
-.tab-content { padding: 20px; overflow-y: auto; display: none; line-height: 1.6; font-size: 0.9rem; }
-.tab-content.active { display: block; }
-h3 { color: #60a5fa; margin: 0 0 8px 0; font-size: 1rem; border-left: 3px solid #60a5fa; padding-left: 8px; }
-ul { margin: 0 0 15px 0; padding-left: 18px; } li { margin-bottom: 4px; }
-
-/* --- Modal & SVG --- */
-.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; display: none; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
-.modal-content { background: var(--bg-card); width: 600px; max-width: 90%; border-radius: 8px; border: 1px solid var(--border-color); max-height: 80vh; display: flex; flex-direction: column; }
-.modal-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color); font-size: 1.1rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
-.close-btn { cursor: pointer; font-size: 1.5rem; }
-.modal-body { padding: 20px; overflow-y: auto; }
-.heart-svg { width: 100%; max-width: 200px; }
-.path-heart { fill: #334155; stroke: #475569; stroke-width: 2; transition: fill 0.3s; }
-.path-conduction { fill: none; stroke: #facc15; stroke-width: 3; opacity: 0.3; }
-.node { fill: #facc15; } .block-bar { fill: #f44336; display: none; }
-.flash { animation: flash 1s infinite; }
-.flash-overlay { position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 100; }
-.flash-anim { animation: flash-screen 0.2s ease-out; }
-
-/* ==========================================================================
-   📱 響應式設計 (RWD) - 自動識別手機
-   ========================================================================== */
-@media (max-width: 1000px) {
-    /* 把身體轉為直向 */
-    body { flex-direction: column; overflow-y: auto; }
-    
-    /* 側邊欄變為頂部導航或摺疊 */
-    aside { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-color); }
-    .nav-scroll { display: none; } /* 手機版暫時隱藏選單，或是你可以改成下拉式 */
-    /* 這裡為了簡單，我們讓手機版選單可以橫向滑動 */
-    .nav-scroll { display: flex; overflow-x: auto; padding: 5px; height: 60px; white-space: nowrap; }
-    .nav-category { display: none; } /* 手機版隱藏分類標題以節省空間 */
-    .nav-btn { display: inline-flex; width: auto; margin-right: 5px; border-left: none; border-bottom: 3px solid transparent; }
-    .nav-btn.active { border-left: none; border-bottom-color: #60a5fa; }
-    
-    /* 上方容器變為直向堆疊 */
-    .top-container { flex-direction: column; height: auto; flex: none; }
-    .monitor-screen { height: 250px; border-right: none; border-bottom: 1px solid #333; }
-    
-    /* 生命徵象變為橫向排列 */
-    .vitals-panel { width: 100%; flex-direction: row; flex-wrap: wrap; justify-content: space-around; border-right: none; border-bottom: 1px solid #333; padding: 5px; }
-    .vital-row { width: 30%; border-bottom: none; align-items: center; }
-    .vital-value { font-size: 1.4rem; }
-    
-    /* 控制面板 */
-    .control-panel { width: 100%; flex-direction: row; }
-    .defib-section { width: 40%; border-right: 1px solid #333; border-bottom: none; }
-    .meds-section { flex: 1; height: 120px; }
-    
-    /* 教育區塊 */
-    .edu-container { grid-template-columns: 1fr; padding: 10px; }
-    .anatomy-box { display: none; } /* 手機版隱藏解剖圖以節省空間 */
+.heart-svg .node:hover, .heart-svg .path-conduction:hover {
+    filter: drop-shadow(0 0 5px yellow);
+    stroke: yellow;
+    fill: yellow;
 }
+
+/* NIBP Button Active Style (新增) */
+.nibp-btn.measuring {
+    background: var(--c-bp);
+    color: #000;
+    font-weight: bold;
+    animation: pulse-bp 1s infinite;
+}
+@keyframes pulse-bp { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }

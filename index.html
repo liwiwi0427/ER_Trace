@@ -115,14 +115,9 @@
       <div class="anatomy-box">
     <h4 style="color:var(--text-muted); margin-top:0;">Pathology View</h4>
     <svg class="heart-svg" viewBox="0 0 300 350">
-        <!-- 心肌底圖 -->
         <path id="heart-muscle" class="path-heart" d="M150 330 C 50 300, 20 180, 20 120 C 20 60, 80 20, 150 90 C 220 20, 280 60, 280 120 C 280 180, 250 300, 150 330 Z" />
-        
-        <!-- ⚠️ 修改處：為這兩條路徑加入 id (path-atria, path-vent) -->
         <path id="path-atria" class="path-conduction" d="M80 80 Q 115 110 150 140" />
         <path id="path-vent" class="path-conduction" d="M150 140 L 150 190 L 100 260 M 150 190 L 200 260" />
-        
-        <!-- 節點與特殊圖示 -->
         <circle id="node-sa" class="node" cx="80" cy="80" r="8" />
         <circle id="node-av" class="node" cx="150" cy="140" r="6" />
         <rect id="vis-block" class="block-bar" x="135" y="145" width="30" height="8" rx="2" />

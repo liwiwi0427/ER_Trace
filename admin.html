@@ -2,46 +2,126 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>ECG 資料庫管理後台</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECG 資料庫後台管理系統</title>
+<!-- 共用主樣式變數 -->
+<link rel="stylesheet" href="style.css">
+<!-- 後台專用樣式 -->
 <link rel="stylesheet" href="admin.css">
-<link rel="stylesheet" href="style.css"> <!-- 共用變數 -->
 </head>
 <body>
-    <div class="admin-card">
-        <h2>🛠️ 心電圖資料生成器 (Data Generator)</h2>
-        <p style="color:var(--text-muted); margin-bottom:20px;">請填寫下方資訊，生成後的代碼請複製並貼入 <code>data.js</code>。</p>
-        
-        <div class="g-row">
-            <label>心律代號 (ID Key, e.g. 'vt_new')</label>
-            <input type="text" id="a-key" placeholder="輸入唯一代號 (英數)">
-        </div>
-        
-        <div class="g-row">
-            <label>顯示標題 (Full Title)</label>
-            <input type="text" id="a-title" placeholder="例如：VT 心室頻脈">
-        </div>
-        
-        <div class="g-row">
-            <label>右上角標籤 (Tag)</label>
-            <input type="text" id="a-tag" value="Warning" placeholder="例如：Critical / Normal">
-        </div>
 
-        <div class="g-row">
-            <label>標籤顏色 (Tag Color)</label>
-            <input type="color" id="a-color" value="#ff9800" style="height:40px; cursor:pointer;">
-        </div>
-
-        <div class="g-row" style="display:flex; gap:10px; align-items:center; margin-bottom:20px;">
-            <input type="checkbox" id="a-shock" style="width:auto;">
-            <label for="a-shock" style="margin:0; color:#fff; cursor:pointer;">建議電擊 (Shockable)</label>
-        </div>
-        
-        <button onclick="gen()">生成 JSON 代碼</button>
-        
-        <label style="margin-top:20px;">生成結果 (Output):</label>
-        <pre id="output">尚無資料...</pre>
+<div class="admin-container">
+    <div class="admin-header">
+        <h1>🛠️ ECG Database Generator</h1>
+        <p>輸入臨床資料，自動生成 <code>data.js</code> 所需的 JSON 代碼。</p>
     </div>
-    
-    <script src="admin.js"></script>
+
+    <div class="admin-grid">
+        <!-- 左側：輸入區 -->
+        <div class="input-panel">
+            
+            <!-- A. 識別與分類 -->
+            <div class="form-section">
+                <h3>1. 識別資訊 (Basic Info)</h3>
+                <div class="row">
+                    <div class="grp">
+                        <label>ID Key (唯一代號)</label>
+                        <input type="text" id="id-key" placeholder="e.g. vt_new" required>
+                    </div>
+                    <div class="grp">
+                        <label>標題 (Title)</label>
+                        <input type="text" id="id-title" placeholder="e.g. VT 心室頻脈">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="grp">
+                        <label>右上標籤 (Badge)</label>
+                        <input type="text" id="id-tag" placeholder="e.g. Critical">
+                    </div>
+                    <div class="grp">
+                        <label>標籤顏色</label>
+                        <input type="color" id="id-color" value="#ff0000" style="height:42px; cursor:pointer;">
+                    </div>
+                </div>
+                <div class="row checkbox-row">
+                    <input type="checkbox" id="id-shock">
+                    <label for="id-shock">⚡ 可電擊 (Shockable)</label>
+                </div>
+                <div class="row">
+                    <div class="grp">
+                        <label>動畫類型 (Visual)</label>
+                        <select id="id-vis">
+                            <option value="nsr">NSR/Brady (正常傳導)</option>
+                            <option value="afib">Afib (房顫亂流)</option>
+                            <option value="psvt">PSVT/Flutter (迴路)</option>
+                            <option value="vt">VT (心室源發)</option>
+                            <option value="vf">VF (心室亂顫)</option>
+                            <option value="avb1">AVB 1st (延遲)</option>
+                            <option value="avb3">AVB 3rd (阻斷)</option>
+                            <option value="asystole">Asystole (停止)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- B. 生命徵象 -->
+            <div class="form-section">
+                <h3>2. 生命徵象預設值 (Vitals)</h3>
+                <div class="row five-col">
+                    <div class="grp"><label>HR</label><input type="number" id="v-hr" value="80"></div>
+                    <div class="grp"><label>Sys</label><input type="text" id="v-sys" value="120"></div>
+                    <div class="grp"><label>Dia</label><input type="text" id="v-dia" value="80"></div>
+                    <div class="grp"><label>SpO2</label><input type="number" id="v-spo2" value="98"></div>
+                    <div class="grp"><label>RR</label><input type="number" id="v-rr" value="16"></div>
+                    <div class="grp"><label>Temp</label><input type="number" id="v-temp" value="37.0"></div>
+                </div>
+                <small class="hint">* 若無數值（如 Asystole），請輸入 <code>---</code> 或 <code>0</code></small>
+            </div>
+
+            <!-- C. 詳細內容 (核心需求) -->
+            <div class="form-section">
+                <h3>3. 臨床詳細資料 (List Data)</h3>
+                
+                <div class="grp">
+                    <label>📋 心電圖特徵 (Criteria)</label>
+                    <textarea id="txt-cri" placeholder="每一行代表一個重點 (換行自動分隔)&#10;例如：&#10;QRS變寬&#10;P波消失"></textarea>
+                </div>
+
+                <div class="grp">
+                    <label>🧬 病理機轉 (Pathophysiology)</label>
+                    <textarea id="txt-patho" placeholder="輸入詳細的病理機轉描述 (單一長段落)..." style="height:60px;"></textarea>
+                </div>
+
+                <div class="grp">
+                    <label>🔍 常見成因 (Causes)</label>
+                    <textarea id="txt-cause" placeholder="每一行代表一個成因 (換行自動分隔)&#10;例如：&#10;心肌梗塞&#10;電解質不平衡"></textarea>
+                </div>
+
+                <div class="grp">
+                    <label>💊 治療指引 (Rx / ACLS)</label>
+                    <textarea id="txt-rx" placeholder="每一行代表一個處置 (換行自動分隔)&#10;例如：&#10;給予 Amiodarone&#10;同步整流"></textarea>
+                </div>
+
+                <div class="grp">
+                    <label>❤️ 護理重點 (Nursing)</label>
+                    <textarea id="txt-nur" placeholder="每一行代表一個護理重點 (換行自動分隔)"></textarea>
+                </div>
+            </div>
+
+            <button class="gen-btn" onclick="generateCode()">✨ 生成程式碼 (GENERATE)</button>
+        </div>
+
+        <!-- 右側：輸出區 -->
+        <div class="output-panel">
+            <h3>生成結果 (Output)</h3>
+            <p>請複製下方代碼，貼入 <code>data.js</code> 的物件中：</p>
+            <pre id="output-box">// 等待生成...</pre>
+            <button class="copy-btn" onclick="copyToClip()">📋 複製代碼</button>
+        </div>
+    </div>
+</div>
+
+<script src="admin.js"></script>
 </body>
 </html>

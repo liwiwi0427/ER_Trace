@@ -1,20 +1,47 @@
 <!DOCTYPE html>
-<html lang="zh-tw">
+<html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>ECG Database Admin</title>
+<title>ECG 資料庫管理後台</title>
 <link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="style.css"> <!-- 共用變數 -->
 </head>
 <body>
     <div class="admin-card">
-        <h2>🛠️ Data Generator</h2>
-        <div class="g-row"><label>ID (Key)</label><input type="text" id="a-key" placeholder="e.g. nsr_variant"></div>
-        <div class="g-row"><label>Title</label><input type="text" id="a-title" placeholder="Full Name"></div>
-        <div class="g-row"><label>Tag</label><input type="text" id="a-tag" value="Normal"></div>
-        <!-- Simplified for demo -->
-        <button onclick="gen()">GENERATE JSON CODE</button>
-        <pre id="output"></pre>
+        <h2>🛠️ 心電圖資料生成器 (Data Generator)</h2>
+        <p style="color:var(--text-muted); margin-bottom:20px;">請填寫下方資訊，生成後的代碼請複製並貼入 <code>data.js</code>。</p>
+        
+        <div class="g-row">
+            <label>心律代號 (ID Key, e.g. 'vt_new')</label>
+            <input type="text" id="a-key" placeholder="輸入唯一代號 (英數)">
+        </div>
+        
+        <div class="g-row">
+            <label>顯示標題 (Full Title)</label>
+            <input type="text" id="a-title" placeholder="例如：VT 心室頻脈">
+        </div>
+        
+        <div class="g-row">
+            <label>右上角標籤 (Tag)</label>
+            <input type="text" id="a-tag" value="Warning" placeholder="例如：Critical / Normal">
+        </div>
+
+        <div class="g-row">
+            <label>標籤顏色 (Tag Color)</label>
+            <input type="color" id="a-color" value="#ff9800" style="height:40px; cursor:pointer;">
+        </div>
+
+        <div class="g-row" style="display:flex; gap:10px; align-items:center; margin-bottom:20px;">
+            <input type="checkbox" id="a-shock" style="width:auto;">
+            <label for="a-shock" style="margin:0; color:#fff; cursor:pointer;">建議電擊 (Shockable)</label>
+        </div>
+        
+        <button onclick="gen()">生成 JSON 代碼</button>
+        
+        <label style="margin-top:20px;">生成結果 (Output):</label>
+        <pre id="output">尚無資料...</pre>
     </div>
+    
     <script src="admin.js"></script>
 </body>
 </html>

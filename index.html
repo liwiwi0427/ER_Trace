@@ -3,154 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ER Trace</title>
-    
-    <!-- 1. 載入 CSS -->
+    <title>ECG Pro V11.0 (Ultimate)</title>
     <link rel="stylesheet" href="style.css">
-
-    <!-- 2. 安全檢查 -->
+    <!-- 🔒 警衛機制 -->
     <script>
-        if (!localStorage.getItem('ecg_username')) {
-            window.location.replace('login.html');
-        }
+        if (!localStorage.getItem('ecg_username')) { window.location.replace('login.html'); }
     </script>
 </head>
 <body>
 
-<!-- SIDEBAR -->
 <aside>
     <div class="brand">
-        <span>⚡ER Trace</span>
-        <span class="ver-badge">V10.5</span>
+        <span>⚡ ECG Pro</span>
+        <span class="ver-badge">V11.0</span>
     </div>
     
-    <!-- 選單由 script.js 處理點擊 -->
-    <div class="nav-scroll">
-        <div class="nav-category">Sinus</div>
-        <div class="nav-btn active" onclick="loadCase('nsr')"><span>NSR（正常竇性心律）</span><div class="dot norm"></div></div>
-        <div class="nav-btn" onclick="loadCase('sb')"><span>Sinus Brady（竇性緩脈）</span><div class="dot norm"></div></div>
-        
-        <div class="nav-category">Atrial</div>
-        <div class="nav-btn" onclick="loadCase('psvt')"><span>PSVT（室上性心搏過速）</span><div class="dot warn"></div></div>
-        <div class="nav-btn" onclick="loadCase('afib')"><span>AFib（心房顫動）</span><div class="dot warn"></div></div>
-        <div class="nav-btn" onclick="loadCase('afl')"><span>A-Flutter（心房撲動）</span><div class="dot warn"></div></div>
+    <!-- 主題選擇器 (新增) -->
+    <div class="theme-selector">
+        <label>🎨 介面風格</label>
+        <select id="theme-select" onchange="changeTheme(this.value)">
+            <option value="dark">經典深色 (Default)</option>
+            <option value="light">臨床明亮 (Light)</option>
+            <option value="retro">復古監測 (Retro)</option>
+            <option value="cyber">賽博龐克 (Cyber)</option>
+        </select>
+    </div>
 
-        <div class="nav-category">Ventricular</div>
-        <div class="nav-btn" onclick="loadCase('pvc')"><span>PVC（心室早期收縮）</span><div class="dot warn"></div></div>
-        <div class="nav-btn" onclick="loadCase('vt_pulse')"><span>VT（心室頻脈）</span><div class="dot crit"></div></div>
-        <div class="nav-btn" onclick="loadCase('vt_pulseless')"><span>pVT（無脈性VT）</span><div class="dot crit"></div></div>
-        <div class="nav-btn" onclick="loadCase('tdp')"><span>TdP（多型性VT）</span><div class="dot crit"></div></div>
-        <div class="nav-btn" onclick="loadCase('vf')"><span>VF（心室顫動）</span><div class="dot crit"></div></div>
+    <div class="nav-scroll">
+        <div class="nav-category">Sinus (竇性)</div>
+        <div class="nav-btn active" onclick="loadCase('nsr')"><span>NSR 正常竇性</span><div class="dot norm"></div></div>
+        <div class="nav-btn" onclick="loadCase('sb')"><span>Sinus Brady 緩脈</span><div class="dot norm"></div></div>
+        
+        <div class="nav-category">Atrial (房性)</div>
+        <div class="nav-btn" onclick="loadCase('psvt')"><span>PSVT 室上速</span><div class="dot warn"></div></div>
+        <div class="nav-btn" onclick="loadCase('afib')"><span>AFib 房顫</span><div class="dot warn"></div></div>
+        <div class="nav-btn" onclick="loadCase('afl')"><span>A-Flutter 房撲</span><div class="dot warn"></div></div>
+
+        <div class="nav-category">Ventricular (室性)</div>
+        <div class="nav-btn" onclick="loadCase('pvc')"><span>PVC 室早收</span><div class="dot warn"></div></div>
+        <div class="nav-btn" onclick="loadCase('vt_pulse')"><span>VT (Pulse)</span><div class="dot crit"></div></div>
+        <div class="nav-btn" onclick="loadCase('vt_pulseless')"><span>pVT (No Pulse)</span><div class="dot crit"></div></div>
+        <div class="nav-btn" onclick="loadCase('tdp')"><span>TdP 扭轉波</span><div class="dot crit"></div></div>
+        <div class="nav-btn" onclick="loadCase('vf')"><span>VF 室顫</span><div class="dot crit"></div></div>
 
         <div class="nav-category">Blocks & Arrest</div>
         <div class="nav-btn" onclick="loadCase('avb1')"><span>1st Degree AVB</span><div class="dot spec"></div></div>
-        <div class="nav-btn" onclick="loadCase('avb2t1')"><span>2nd Degree Type I</span><div class="dot spec"></div></div>
-        <div class="nav-btn" onclick="loadCase('avb2t2')"><span>2nd Degree Type II</span><div class="dot spec"></div></div>
+        <div class="nav-btn" onclick="loadCase('avb2t1')"><span>2nd Degree I</span><div class="dot spec"></div></div>
+        <div class="nav-btn" onclick="loadCase('avb2t2')"><span>2nd Degree II</span><div class="dot spec"></div></div>
         <div class="nav-btn" onclick="loadCase('avb3')"><span>3rd Degree AVB</span><div class="dot spec"></div></div>
-        <div class="nav-btn" onclick="loadCase('pea')"><span>PEA（無脈性電活動）</span><div class="dot crit"></div></div>
-        <div class="nav-btn" onclick="loadCase('asystole')"><span>Asystole（心搏停止）</span><div class="dot crit"></div></div>
+        <div class="nav-btn" onclick="loadCase('pea')"><span>PEA 無脈電氣</span><div class="dot crit"></div></div>
+        <div class="nav-btn" onclick="loadCase('asystole')"><span>Asystole 心律止</span><div class="dot crit"></div></div>
     </div>
     
     <div class="sidebar-footer">
-        <div class="footer-btn" onclick="toggleTheme()">🌗<span>主題</span></div>
         <div class="footer-btn" onclick="openModal()">ℹ️<span>資訊</span></div>
-        <div class="footer-btn" onclick="logout()" style="color:#ef4444;">🚪<span>登出</span></div>
+        <div class="footer-btn" onclick="logout()" style="color:var(--st-crit);">🚪<span>登出</span></div>
     </div>
 </aside>
 
-<!-- MAIN CONTENT -->
 <main>
-    <div class="top-container">
-        <!-- Monitor -->
-        <div class="monitor-screen">
-            <div class="ecg-grid"></div>
-            <div class="flash-overlay" id="screen-flash"></div>
-            
-            <div class="monitor-overlay">
-                <div class="monitor-title">LEAD II <span style="font-size:0.8em; opacity:0.7; margin-left:10px;">STAT Monitoring</span></div>
-                <!-- 名字顯示位置 -->
-                <div id="user-staff-badge">Loading...</div>
+    <!-- 上半部：監視器與控制 -->
+    <div class="top-deck">
+        <!-- 左：監視器畫面 -->
+        <div class="monitor-frame">
+            <div class="monitor-screen">
+                <div class="ecg-grid"></div>
+                <div class="flash-overlay" id="screen-flash"></div>
+                <div class="monitor-overlay">
+                    <div class="monitor-header">LEAD II <span class="monitor-mode">Monitor Mode</span></div>
+                    <div id="user-staff-badge">Staff: --</div>
+                </div>
+                <div class="med-log" id="med-log"></div>
+                <canvas id="ecgCanvas"></canvas>
             </div>
-
-            <div class="med-log" id="med-log"></div>
-            <canvas id="ecgCanvas"></canvas>
+            <!-- 數值面板 (整合在螢幕右側) -->
+            <div class="vitals-panel">
+                <div class="vital-row c-hr"><span class="lbl">HR</span><span class="val" id="val-hr">--</span><span class="unit">bpm</span></div>
+                <div class="vital-row c-bp">
+                    <span class="lbl">NIBP</span>
+                    <div class="val-group"><span id="val-sys">--</span>/<span id="val-dia">--</span></div>
+                    <button class="nibp-btn" id="btn-nibp" onclick="toggleNIBP()">測量</button>
+                </div>
+                <div class="vital-row c-spo2"><span class="lbl">SpO2</span><span class="val" id="val-spo2">--</span><span class="unit">%</span></div>
+                <div class="vital-row c-rr"><span class="lbl">RR</span><span class="val" id="val-rr">--</span><span class="unit">rpm</span></div>
+            </div>
         </div>
 
-        <!-- Vitals -->
-        <div class="vitals-panel">
-            <div class="vital-row c-hr"><div class="vital-label">HR</div><div class="vital-value" id="val-hr">--</div><div class="vital-unit">bpm</div></div>
-            <div class="vital-row c-bp">
-                <div class="vital-label">NIBP</div>
-                <div style="display:flex;align-items:baseline;"><span class="vital-value" id="val-sys">--</span><span style="opacity:0.5;">/</span><span class="vital-value" id="val-dia">--</span></div>
-                <div class="vital-unit">mmHg</div>
-                <button class="nibp-btn" id="btn-nibp" onclick="toggleNIBP()">Start</button>
-            </div>
-            <div class="vital-row c-spo2"><div class="vital-label">SpO2</div><div class="vital-value" id="val-spo2">--</div><div class="vital-unit">%</div></div>
-            <div class="vital-row c-rr"><div class="vital-label">RESP</div><div class="vital-value" id="val-rr">--</div><div class="vital-unit">rpm</div></div>
-            <div class="vital-row c-temp"><div class="vital-label">TEMP</div><div class="vital-value" id="val-temp">--</div><div class="vital-unit">°C</div></div>
-        </div>
-
-        <!-- Controls -->
+        <!-- 右：控制台 -->
         <div class="control-panel">
             <div class="defib-section">
-                <div class="energy-lcd"><span id="joule-val">200</span>J</div>
-                <div class="defib-btns">
-                    <button class="btn-defib btn-charge" id="btn-charge" onclick="charge()">Charge</button>
-                    <button class="btn-defib btn-shock" id="btn-shock" onclick="shock()" disabled>Shock</button>
+                <div class="lcd-display"><span id="joule-val">200</span> J</div>
+                <div class="defib-controls">
+                    <button class="btn-defib btn-charge" id="btn-charge" onclick="charge()">CHARGE</button>
+                    <button class="btn-defib btn-shock" id="btn-shock" onclick="shock()" disabled>SHOCK</button>
                 </div>
             </div>
             <div class="meds-section">
-                <div class="meds-title">CRASH CART</div>
-                <button class="drug-btn d-aden" onclick="giveDrug('adenosine')"><span>Adenosine</span><span style="opacity:0.6;font-size:0.7rem;">6mg</span></button>
-                <button class="drug-btn d-epi" onclick="giveDrug('epi')"><span>Epinephrine</span><span style="opacity:0.6;font-size:0.7rem;">1mg</span></button>
-                <button class="drug-btn d-amio" onclick="giveDrug('amio')"><span>Amiodarone</span><span style="opacity:0.6;font-size:0.7rem;">150mg</span></button>
-                <button class="drug-btn d-atro" onclick="giveDrug('atropine')"><span>Atropine</span><span style="opacity:0.6;font-size:0.7rem;">1mg</span></button>
-                <button class="drug-btn d-mag" onclick="giveDrug('mag')"><span>Magnesium</span><span style="opacity:0.6;font-size:0.7rem;">2g</span></button>
+                <div class="section-title">ACLs Meds</div>
+                <div class="meds-grid">
+                    <button class="drug-btn d-epi" onclick="giveDrug('epi')">Epinephrine <span>1mg</span></button>
+                    <button class="drug-btn d-amio" onclick="giveDrug('amio')">Amiodarone <span>150mg</span></button>
+                    <button class="drug-btn d-aden" onclick="giveDrug('adenosine')">Adenosine <span>6mg</span></button>
+                    <button class="drug-btn d-atro" onclick="giveDrug('atropine')">Atropine <span>1mg</span></button>
+                    <button class="drug-btn d-mag" onclick="giveDrug('mag')">Magnesium <span>2g</span></button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Education -->
+    <!-- 下半部：教學區 -->
     <div class="edu-container">
+        <!-- 解剖圖 -->
         <div class="anatomy-box">
-            <h4 style="color:var(--text-muted); margin-top:0;">電位傳導路徑</h4>
+            <div class="box-header">Pathology View</div>
             <svg class="heart-svg" viewBox="0 0 300 350">
+                <!-- 心肌底圖 -->
                 <path id="heart-muscle" class="path-heart" d="M150 330 C 50 300, 20 180, 20 120 C 20 60, 80 20, 150 90 C 220 20, 280 60, 280 120 C 280 180, 250 300, 150 330 Z" />
-                <path class="path-conduction" d="M80 80 Q 115 110 150 140" />
-                <path class="path-conduction" d="M150 140 L 150 190 L 100 260 M 150 190 L 200 260" />
+                
+                <!-- 傳導路徑 (關鍵動畫修改) -->
+                <path id="path-atria" class="path-conduction" d="M80 80 Q 115 110 150 140" />
+                <path id="path-vent" class="path-conduction" d="M150 140 L 150 190 L 100 260 M 150 190 L 200 260" />
+                
+                <!-- 節點 -->
                 <circle id="node-sa" class="node" cx="80" cy="80" r="8" />
                 <circle id="node-av" class="node" cx="150" cy="140" r="6" />
+                
+                <!-- 特殊狀態圖示 -->
                 <rect id="vis-block" class="block-bar" x="135" y="145" width="30" height="8" rx="2" />
-                <circle id="vis-psvt" cx="150" cy="140" r="15" fill="none" stroke="#fdd835" stroke-width="3" stroke-dasharray="4,4" style="display:none;" />
+                <circle id="vis-psvt" cx="150" cy="140" r="15" class="reentry-ring" />
                 <g id="vis-tdp" style="display:none;">
-                    <circle class="flash" cx="120" cy="220" r="6" fill="red" />
-                    <circle class="flash" cx="180" cy="250" r="6" fill="red" style="animation-delay:0.2s"/>
+                    <circle class="flash-dot" cx="120" cy="220" r="6" />
+                    <circle class="flash-dot" cx="180" cy="250" r="6" style="animation-delay:0.2s"/>
                 </g>
             </svg>
-            <p id="anatomy-text" style="color:var(--text-muted); font-size:0.8rem; text-align:center; margin-top:10px;">Normal</p>
+            <p id="anatomy-text">Normal Conduction</p>
         </div>
 
+        <!-- 文字內容 -->
         <div class="content-box">
             <div class="content-header">
                 <div class="rhythm-title" id="txt-title">NSR</div>
-                <span class="rhythm-tag" id="txt-tag" style="background:#4caf50;">Normal</span>
+                <span class="rhythm-tag" id="txt-tag">Normal</span>
             </div>
             <div class="tabs">
-                <button class="tab-btn active" onclick="setTab('overview')">大綱</button>
-                <button class="tab-btn" onclick="setTab('patho')">病理</button>
-                <button class="tab-btn" onclick="setTab('rx')">治療</button>
+                <button class="tab-btn active" onclick="setTab('overview')">特徵 (Criteria)</button>
+                <button class="tab-btn" onclick="setTab('patho')">病理 (Patho)</button>
+                <button class="tab-btn" onclick="setTab('rx')">處置 (Rx)</button>
             </div>
-            <div id="tab-overview" class="tab-content active">
-                <h3>📊 心電圖特徵</h3><ul id="list-criteria"></ul>
-                <div id="alert-box" style="padding:10px;border-radius:4px;display:none;"></div>
-            </div>
-            <div id="tab-patho" class="tab-content">
-                <h3>🧬 病理機轉</h3><p id="txt-patho"></p>
-                <h3>🔍 致病原因</h3><ul id="list-causes"></ul>
-            </div>
-            <div id="tab-rx" class="tab-content">
-                <h3>💊 ACLS 治療指引</h3><ul id="list-rx"></ul>
-                <h3>❤️ 護理措施</h3><ul id="list-nurse"></ul>
+            <div class="tab-viewport">
+                <div id="tab-overview" class="tab-content active">
+                    <ul id="list-criteria"></ul>
+                    <div id="alert-box"></div>
+                </div>
+                <div id="tab-patho" class="tab-content">
+                    <p id="txt-patho"></p>
+                    <h4>常見成因</h4>
+                    <ul id="list-causes"></ul>
+                </div>
+                <div id="tab-rx" class="tab-content">
+                    <h4>ACLS 建議</h4>
+                    <ul id="list-rx"></ul>
+                    <h4>護理重點</h4>
+                    <ul id="list-nurse"></ul>
+                </div>
             </div>
         </div>
     </div>
@@ -161,21 +176,15 @@
     <div class="modal-content">
         <div class="modal-header"><span>System Info</span><span class="close-btn" onclick="closeModal()">✕</span></div>
         <div class="modal-body">
-            <div class="log-section">
-                <div class="log-title">System Status</div>
-                <p>User Logged in as: <span id="modal-user-name"></span></p>
-            </div>
-            <div class="log-section">
-                <div class="log-title">📋 版本資訊</div>
-                <p>ER Trace•急診心跡</p>
-            </div>
+            <p><strong>ECG Pro Simulator V11.0</strong></p>
+            <p>Current User: <span id="modal-user-name">--</span></p>
+            <hr>
+            <p style="font-size:0.8rem; opacity:0.7;">僅供教學使用，非醫療器材。</p>
         </div>
     </div>
 </div>
 
-<!-- 3. 載入資料庫與邏輯 -->
 <script src="data.js"></script>
 <script src="script.js"></script>
-
 </body>
 </html>

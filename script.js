@@ -39,7 +39,6 @@ function loadCase(k) {
     
     // 更新按鈕狀態
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    // 這裡需要判斷是否由點擊觸發
     const clickedBtn = document.querySelector(`.nav-btn[onclick="loadCase('${k}')"]`);
     if(clickedBtn) clickedBtn.classList.add('active');
 
@@ -91,15 +90,61 @@ function fluctuateHR() {
 }
 
 function updateAnatomy(vis) {
-    const m = document.getElementById('heart-muscle'); m.classList.remove('mech-fail');
-    const sa=document.getElementById('node-sa'); const av=document.getElementById('node-av');
-    document.querySelectorAll('.node, .path-conduction').forEach(e=>e.style.animation='none');
-    ['vis-block','vis-psvt','vis-tdp'].forEach(id=>document.getElementById(id).style.display='none');
+    const m = document.getElementById('heart-muscle'); 
+    m.classList.remove('mech-fail');
     
-    if(vis==='nsr'||vis==='pea'){ sa.style.animation=av.style.animation='flash 0.8s infinite'; if(vis==='pea') m.classList.add('mech-fail'); }
-    else if(vis==='psvt'){ document.getElementById('vis-psvt').style.display='block'; document.getElementById('vis-psvt').classList.add('reentry'); }
-    else if(vis==='tdp'){ document.getElementById('vis-tdp').style.display='block'; }
-    else if(vis.includes('block')){ document.getElementById('vis-block').style.display='block'; sa.style.animation='flash 0.8s infinite'; }
+    // 取得所有元件
+    const sa = document.getElementById('node-sa'); 
+    const av = document.getElementById('node-av');
+    const pathAtria = document.getElementById('path-atria');
+    const pathVent = document.getElementById('path-vent');
+    
+    // 1. 重置所有動畫
+    document.querySelectorAll('.node, .path-conduction').forEach(e => {
+        e.style.animation = 'none';
+        e.style.opacity = '0.3'; // 恢復預設暗淡
+    });
+    
+    // 隱藏特殊標示
+    ['vis-block','vis-psvt','vis-tdp'].forEach(id => document.getElementById(id).style.display='none');
+    document.getElementById('anatomy-text').innerText = "";
+
+    // 2. 依據病理設定動畫
+    if(vis === 'nsr' || vis === 'sb' || vis === 'pea') {
+        // 正常傳導順序：SA -> AtriaPath -> AV -> VentPath
+        // 使用 animation-delay 創造流動感
+        const dur = (vis === 'sb') ? '1.2s' : '0.8s'; // 慢心律動畫較慢
+        
+        sa.style.animation = `flash ${dur} infinite`;
+        if(pathAtria) pathAtria.style.animation = `flash ${dur} infinite 0.1s`; // 延遲 0.1秒
+        av.style.animation = `flash ${dur} infinite 0.2s`;
+        if(pathVent) pathVent.style.animation = `flash ${dur} infinite 0.3s`;
+
+        if(vis === 'pea') m.classList.add('mech-fail'); // PEA 機械衰竭
+    }
+    else if(vis === 'psvt' || vis === 'afl') {
+        // 迴路動畫
+        document.getElementById('vis-psvt').style.display = 'block';
+        document.getElementById('vis-psvt').classList.add('reentry');
+        // 快速閃爍
+        if(pathVent) pathVent.style.animation = 'flash 0.3s infinite';
+    }
+    else if(vis === 'tdp' || vis === 'vt' || vis === 'vf') {
+        // 心室問題
+        document.getElementById('vis-tdp').style.display = 'block';
+        if(pathVent) pathVent.style.animation = 'flash 0.4s infinite';
+    }
+    else if(vis.includes('block')) {
+        // 傳導阻滯：顯示阻擋條
+        document.getElementById('vis-block').style.display = 'block';
+        sa.style.animation = 'flash 0.8s infinite';
+        if(pathAtria) pathAtria.style.animation = 'flash 0.8s infinite 0.1s';
+        // AV 與下方路徑不閃爍 (或閃爍頻率不同)，視阻滯程度而定
+        if(vis === 'block-mild') {
+            av.style.animation = 'flash 0.8s infinite 0.4s'; // 延遲更久 (PR prolong)
+            if(pathVent) pathVent.style.animation = 'flash 0.8s infinite 0.5s';
+        }
+    }
 }
 
 // 繪圖邏輯
@@ -109,8 +154,6 @@ function getY(t) {
     if(adenosineFx>0){adenosineFx--; return y+(Math.random()-0.5)*2;}
     y+=(Math.random()-0.5)*2; const cyc=(d)=>t%d;
     
-    // 這裡使用簡化的波形邏輯，你可以根據之前更複雜的波形代碼進行替換
-    // 為了保持穩定，這裡使用基本的判斷
     if(['nsr','pea','sb','avb1', 'avb3'].includes(curKey)) {
         let dur=(curKey==='sb')?1300:800; let c=cyc(dur);
         if(c>50&&c<100)y-=5; 

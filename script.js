@@ -1,292 +1,179 @@
-/* ================= VARIABLES ================= */
+// 全域變數
 let curKey = 'nsr';
-let joules = 200, isCharging = false, isReady = false;
-let shockFx = 0, adenosineFx = 0;
-let animTimers = []; 
-const cvs = document.getElementById('ecgCanvas');
-const ctx = cvs.getContext('2d');
-let x = 0, speed = 1.5, lastY = 150;
-let nextBeatTime = 0; // for AFib irregular logic
+let joules = 200, isCharging=false, isReady=false, shockFx=0, adenosineFx=0;
+let nibpTimer, isNibp=false;
+const canvas = document.getElementById('ecgCanvas'); 
+const ctx = canvas.getContext('2d');
+let x=0; const speed=1.5; let lastY=150;
 
-/* ================= INITIALIZATION ================= */
+// 初始化執行
 window.addEventListener('DOMContentLoaded', () => {
-    // Check Login
-    const user = localStorage.getItem('ecg_username');
-    if (user) {
-        const b = document.getElementById('user-staff-badge');
-        const m = document.getElementById('modal-user-name');
-        if(b) b.innerHTML = `Staff: <strong>${user}</strong>`;
-        if(m) m.innerText = user;
-    } else {
-        // 簡單防呆
-        if(window.location.href.indexOf('login.html') === -1) {
-            // 為了預覽方便，如果是在本地檔案且沒登入，暫時不跳轉
-            console.warn("No user logged in");
-        }
+    // 讀取並顯示名字
+    const userBadge = document.getElementById('user-staff-badge');
+    const storedName = localStorage.getItem('ecg_username');
+    if(userBadge) {
+        userBadge.innerHTML = storedName ? `醫護人員：<strong>${storedName}</strong>` : `醫護人員：<strong>訪客</strong>`;
     }
 
-    resize();
-    window.addEventListener('resize', resize);
-    
-    // Hover Tips for Anatomy
-    initAnatomyHover();
+    // Canvas Resize 處理
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
-    // Start
-    loadCase('nsr');
+    // 啟動
     draw();
-    setInterval(fluctuate, 2000); // 微幅波動
+    loadCase('nsr');
+    setInterval(fluctuateHR, 2000);
 });
 
-function resize() {
-    if(cvs.parentElement) {
-        cvs.width = cvs.parentElement.clientWidth;
-        cvs.height = cvs.parentElement.clientHeight;
-        lastY = cvs.height/2;
+function resizeCanvas() {
+    if(canvas.parentElement) {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
     }
 }
 
-function initAnatomyHover() {
-    const txt = document.getElementById('anatomy-text');
-    const els = document.querySelectorAll('.path-wire, .node-dot');
-    els.forEach(el => {
-        el.addEventListener('mouseenter', () => {
-            txt.innerText = el.getAttribute('data-tip');
-            txt.style.color = "#fff";
-        });
-        el.addEventListener('mouseleave', () => {
-            txt.innerText = "Normal Conduction";
-            txt.style.color = "var(--text-muted)";
-        });
-    });
-}
-
-/* ================= LOAD CASE ================= */
+// 核心功能：載入心律
 function loadCase(k) {
-    if(!ECG_DATABASE[k]) return;
-    curKey = k;
+    curKey = k; 
     resetDefib();
     
-    // Clear timers
-    animTimers.forEach(t=>clearTimeout(t)); animTimers=[];
+    // 更新按鈕狀態
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    // 這裡需要判斷是否由點擊觸發
+    const clickedBtn = document.querySelector(`.nav-btn[onclick="loadCase('${k}')"]`);
+    if(clickedBtn) clickedBtn.classList.add('active');
 
-    // Buttons UI
-    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-    // ... (add active class logic if needed via event)
-
+    // 從 data.js 的 ECG_DATABASE 讀取資料
     const d = ECG_DATABASE[k];
     
-    // Update Text
+    // 更新文字與數值
+    updateVitals(d);
     document.getElementById('txt-title').innerText = d.t;
-    const tag = document.getElementById('txt-tag');
-    tag.innerText = d.b; tag.style.background = d.c;
+    document.getElementById('txt-tag').innerText = d.b;
+    document.getElementById('txt-tag').style.background = d.c;
     
-    fill('list-criteria', d.cri); fill('list-rx', d.rx);
-    fill('list-nurse', d.n); fill('list-causes', d.cause);
+    // 填入列表
+    fill('list-criteria', d.cri); 
+    fill('list-rx', d.rx);
+    fill('list-nurse', d.n); 
+    fill('list-causes', d.cause);
     document.getElementById('txt-patho').innerText = d.patho;
-
-    // Vitals - Load Standard
-    setVal('val-hr', d.hr);
-    setVal('val-spo2', d.spo2);
-    setVal('val-rr', d.rr);
-    setVal('val-temp', d.temp);
     
-    // NIBP Reset (Standard behavior: resets on new patient/case)
-    document.getElementById('val-sys').innerText = (d.sys==='---')?'---':'--';
-    document.getElementById('val-dia').innerText = (d.sys==='---')?'---':'--';
-
-    // Alerts
-    const box = document.getElementById('alert-box');
-    box.style.display = 'none';
+    // 警示框邏輯
+    const alert = document.getElementById('alert-box');
     if(d.shock) {
-        box.style.display='block'; box.innerHTML="⚡ SHOCKABLE"; 
-        box.style.border='2px solid #f00'; box.style.color='#f00';
-    } else if (k === 'asystole' || k === 'pvt' || k === 'pea') {
-        box.style.display='block'; box.innerHTML="⛔ NON-SHOCKABLE";
-        box.style.border='2px solid #f00'; box.style.color='#f00';
-    }
-
-    runAnatomy(d.vis);
-}
-
-/* ================= NIBP RANDOMIZER ================= */
-function toggleNIBP() {
-    const btn = document.getElementById('btn-nibp');
-    if(btn.innerText === "測量") {
-        btn.innerText = "測量中..."; btn.classList.add('active');
-        document.getElementById('val-sys').innerText = "---";
-        document.getElementById('val-dia').innerText = "---";
-        
-        setTimeout(() => {
-            btn.innerText = "測量"; btn.classList.remove('active');
-            const d = ECG_DATABASE[curKey];
-            if(d.sys !== '---') {
-                // Base value + Random(-10 to +10)
-                const s = parseInt(d.sys) + Math.floor(Math.random()*20 - 10);
-                const dia = parseInt(d.dia) + Math.floor(Math.random()*14 - 7);
-                document.getElementById('val-sys').innerText = s;
-                document.getElementById('val-dia').innerText = dia;
-            } else {
-                document.getElementById('val-sys').innerText = "---";
-                document.getElementById('val-dia').innerText = "---";
-            }
-        }, 3000);
-    }
-}
-
-/* ================= ANIMATION ENGINE ================= */
-function runAnatomy(type) {
-    // Reset
-    const ids = ['n-sa','n-av','p-internodal','p-his','p-branches'];
-    ids.forEach(i => {
-        const el=document.getElementById(i); 
-        el.classList.remove('flowing','firing'); 
-        el.style.opacity='0.3'; // Back to dim
-    });
-    
-    const seq = () => {
-        // NSR / SB / PEA
-        if(type==='nsr' || type==='sb' || type==='pea') {
-            const rate = (type==='sb') ? 1300 : 900;
-            fire('n-sa', 100);
-            timer(()=>flow('p-internodal'), 50);
-            timer(()=>fire('n-av', 150), 250);
-            timer(()=>flow('p-his'), 400);
-            timer(()=>flow('p-branches'), 450);
-            timer(seq, rate);
-        }
-        // Blocks
-        else if(type.includes('avb')) {
-            fire('n-sa', 100);
-            timer(()=>flow('p-internodal'), 50);
-            
-            if(type==='avb1') {
-                timer(()=>fire('n-av', 150), 550); // Long delay
-                timer(()=>flow('p-his'), 700);
-                timer(()=>flow('p-branches'), 750);
-            } 
-            // AVB3 - dissociated, handled simply here
-            if(type==='avb3') { timer(()=>fire('n-av', 100), 600); }
-            
-            timer(seq, 1100);
-        }
-        // VT / VF / PVC
-        else if(type==='vt' || type==='vf' || type==='pvt') {
-            flow('p-branches'); // Retrograde
-            timer(seq, (type==='vf')?200:450);
-        }
-        else {
-            // PSVT etc
-            fire('n-av', 100); 
-            timer(seq, 300);
-        }
-    };
-    seq();
-}
-
-function fire(id, ms) { const el=document.getElementById(id); if(el){el.classList.add('firing'); setTimeout(()=>el.classList.remove('firing'),ms);} }
-function flow(id) { 
-    const el=document.getElementById(id); 
-    if(el){
-        el.classList.remove('flowing'); 
-        void el.offsetWidth; // Reflow
-        el.classList.add('flowing'); 
-    } 
-}
-function timer(fn, ms) { animTimers.push(setTimeout(fn,ms)); }
-
-/* ================= WAVEFORMS ================= */
-function getWaveY(t) {
-    const cy = cvs.height/2;
-    if(shockFx>0){ shockFx--; return cy + (Math.random()-0.5)*500; }
-    
-    let y = 0;
-    // NSR Logic
-    if(['nsr','sb','avb1'].includes(curKey)) {
-        const rate = (curKey==='sb')?1300:850;
-        const p = t%rate;
-        // P
-        y += gaussian(p, 100, 25, -8);
-        // QRS
-        if(p>230 && p<270) {
-            y += (p>248 && p<252)? 50:-15; 
-            if(p>240 && p<260) y += (p%2==0)? -40:40;
-        }
-        // T
-        y += gaussian(p, 450, 60, -12);
-    }
-    // AFib Logic
-    else if(curKey==='afib') {
-        // Irregular beats
-        if(t > nextBeatTime) nextBeatTime = t + 500 + Math.random()*500;
-        // F-waves noise
-        y += Math.sin(t*0.05)*4 + (Math.random()-0.5)*3;
-        // Beat?
-        if(Math.abs(t-nextBeatTime) < 30) y += 50; 
-        else if(Math.abs(t-nextBeatTime) < 50) y -= 15;
-    }
-    // VT Logic
-    else if(curKey==='vt' || curKey==='pvt') {
-        const p = t%350;
-        y += Math.sin(p/350 * Math.PI*2) * 60;
-    }
-    // VF Logic
-    else if(curKey==='vf') {
-        y += Math.sin(t*0.01)*20 + Math.sin(t*0.03)*10 + (Math.random()-0.5)*10;
-    }
-    else {
-        y += (Math.random()-0.5)*5; // Flat
+        alert.style.display='block'; alert.style.background='#FFF9C4'; alert.style.border='4px solid #FF9800'; alert.style.color='black';
+        alert.innerHTML="⚡ <strong>【注意】視情形電擊！</strong> 在醫師或專科護理師監督下可執行電擊去顫！⚡";
+    } else if(k==='pea'||k==='asystole') {
+        alert.style.display='block'; alert.style.background='#FF5252'; alert.style.border='4px solid #D32F2F'; alert.style.color='white';
+        alert.innerHTML="⛔ <strong>【重要】請不要電擊！</strong>給予CPR即可！⛔";
+    } else {
+        alert.style.display='none';
     }
     
-    return cy + y;
+    updateAnatomy(d.vis);
 }
 
-function gaussian(x,c,w,h){ return h*Math.exp(-Math.pow(x-c,2)/(2*w*w)); }
-
-function draw() {
-    // 清除背景
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-monitor');
-    ctx.fillRect(x,0,8,cvs.height);
-    
-    ctx.beginPath();
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--c-hr');
-    ctx.lineWidth=2; ctx.lineCap='round';
-    
-    let y = getWaveY(Date.now());
-    ctx.moveTo(x-speed, lastY);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    
-    lastY=y; x+=speed;
-    if(x>cvs.width){x=0;ctx.beginPath();}
-    requestAnimationFrame(draw);
+function updateVitals(d) {
+    document.getElementById('val-hr').innerText = d.hr;
+    document.getElementById('val-sys').innerText = d.sys;
+    document.getElementById('val-dia').innerText = d.dia;
+    document.getElementById('val-spo2').innerText = d.spo2;
+    document.getElementById('val-rr').innerText = d.rr;
+    document.getElementById('val-temp').innerText = d.temp;
 }
 
-/* ================= UTILS ================= */
-function setVal(id, v) { document.getElementById(id).innerText = v; }
-function fluctuate() { 
-    if(ECG_DATABASE[curKey].hr && typeof ECG_DATABASE[curKey].hr==='number') {
-        document.getElementById('val-hr').innerText = ECG_DATABASE[curKey].hr + Math.floor(Math.random()*3-1);
+function fluctuateHR() {
+    const d = ECG_DATABASE[curKey];
+    if(d.hr !== "---" && d.hr !== 0 && typeof d.hr === 'number') {
+        document.getElementById('val-hr').innerText = d.hr + Math.floor(Math.random()*3)-1;
     }
 }
-function fill(id,arr) { document.getElementById(id).innerHTML = arr?arr.map(x=>`<li>${x}</li>`).join(''):''; }
-function changeTheme(v) { 
-    const b=document.body; 
-    if(v==='dark') b.removeAttribute('data-theme');
-    else b.setAttribute('data-theme',v);
-}
-function openModal(){ document.getElementById('info-modal').style.display='flex'; }
-function closeModal(){ document.getElementById('info-modal').style.display='none'; }
-function setTab(n) {
-    document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
-    document.getElementById('tab-'+n).classList.add('active'); // Wait, IDs in HTML were t1, t2... fixing:
-    // Actually my script setTab used numbers
-} 
-// Override setTab to match HTML ID
-window.setTab = function(n) {
-    document.querySelectorAll('.tab-content').forEach(e=>e.style.display='none');
-    document.getElementById('t'+n).style.display='block';
-    document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));
-    event.target.classList.add('active');
-};
 
-// Defib/Meds omitted for brevity but same logic applies
+function updateAnatomy(vis) {
+    const m = document.getElementById('heart-muscle'); m.classList.remove('mech-fail');
+    const sa=document.getElementById('node-sa'); const av=document.getElementById('node-av');
+    document.querySelectorAll('.node, .path-conduction').forEach(e=>e.style.animation='none');
+    ['vis-block','vis-psvt','vis-tdp'].forEach(id=>document.getElementById(id).style.display='none');
+    
+    if(vis==='nsr'||vis==='pea'){ sa.style.animation=av.style.animation='flash 0.8s infinite'; if(vis==='pea') m.classList.add('mech-fail'); }
+    else if(vis==='psvt'){ document.getElementById('vis-psvt').style.display='block'; document.getElementById('vis-psvt').classList.add('reentry'); }
+    else if(vis==='tdp'){ document.getElementById('vis-tdp').style.display='block'; }
+    else if(vis.includes('block')){ document.getElementById('vis-block').style.display='block'; sa.style.animation='flash 0.8s infinite'; }
+}
+
+// 繪圖邏輯
+function getY(t) {
+    let y = canvas.height/2;
+    if(shockFx>0){shockFx--; return y+(Math.random()-0.5)*600;}
+    if(adenosineFx>0){adenosineFx--; return y+(Math.random()-0.5)*2;}
+    y+=(Math.random()-0.5)*2; const cyc=(d)=>t%d;
+    
+    // 這裡使用簡化的波形邏輯，你可以根據之前更複雜的波形代碼進行替換
+    // 為了保持穩定，這裡使用基本的判斷
+    if(['nsr','pea','sb','avb1', 'avb3'].includes(curKey)) {
+        let dur=(curKey==='sb')?1300:800; let c=cyc(dur);
+        if(c>50&&c<100)y-=5; 
+        if(c>150&&c<200){if(c<160)y+=5;else if(c<180)y-=50;else y+=10;} 
+        if(c>250&&c<350)y-=8*Math.sin((c-250)/100*Math.PI); 
+    }
+    else if(curKey==='psvt'){ let c=cyc(320); if(c>100&&c<150){if(c<110)y+=5;else if(c<130)y-=50;else y+=10;} }
+    else if(curKey==='afib'){ y+=Math.sin(t*0.05)*3; if(cyc(600+Math.random()*200)<40)y-=40; }
+    else if(curKey.includes('vt')){ let c=cyc(330); y+=Math.sin(c/330*Math.PI*2)*60; }
+    else if(curKey==='vf'){ y+=Math.sin(t*0.01)*20+Math.sin(t*0.03)*10; }
+    else if(curKey==='tdp'){ y+=Math.sin(t*0.03)*(Math.sin(t*0.002)*50+20); }
+    return y;
+}
+
+function draw(){ 
+    ctx.clearRect(x,0,6,canvas.height); ctx.beginPath(); ctx.strokeStyle='#4ade80'; ctx.lineWidth=2; 
+    let y=getY(Date.now()); ctx.moveTo(x-speed,lastY); ctx.lineTo(x,y); ctx.stroke(); 
+    lastY=y; x+=speed; if(x>=canvas.width){x=0;ctx.beginPath();} 
+    requestAnimationFrame(draw); 
+}
+
+// 互動功能
+function toggleTheme() { 
+    const b = document.body;
+    b.getAttribute('data-theme') === 'light' ? b.removeAttribute('data-theme') : b.setAttribute('data-theme', 'light');
+}
+function openModal() { document.getElementById('info-modal').style.display='flex'; }
+function closeModal() { document.getElementById('info-modal').style.display='none'; }
+
+function logout() {
+    if(confirm("確定要登出系統嗎？")) {
+        localStorage.removeItem('ecg_username');
+        window.location.replace('login.html');
+    }
+}
+
+function fill(id,arr){document.getElementById(id).innerHTML=arr?arr.map(i=>`<li>${i}</li>`).join(''):'';}
+function setTab(id){
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    document.getElementById(`tab-${id}`).classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    if(event) event.target.classList.add('active');
+}
+
+// 藥物與電擊
+function giveDrug(d){
+    const l=document.getElementById('med-log'); const i=document.createElement('div'); i.className='log-item';
+    i.innerText=`💉 ${d}`; l.appendChild(i); setTimeout(()=>i.remove(),4000);
+    if(d.includes('adenosine') && curKey==='psvt') { setTimeout(()=>{adenosineFx=150;setTimeout(()=>loadCase('nsr'),2000);},1000); }
+}
+function charge(){ if(!isCharging&&!isReady){ isCharging=true; document.getElementById('btn-charge').innerText="Charging..."; setTimeout(()=>{isCharging=false;isReady=true;document.getElementById('btn-charge').innerText="Charged";document.getElementById('btn-shock').disabled=false;document.getElementById('btn-shock').classList.add('ready');},2000); }}
+function shock(){ if(isReady){ shockFx=20; document.getElementById('screen-flash').classList.add('flash-anim'); setTimeout(()=>document.getElementById('screen-flash').classList.remove('flash-anim'),200); if(ECG_DATABASE[curKey].shock) setTimeout(()=>loadCase('nsr'),1000); else if(curKey==='nsr') setTimeout(()=>loadCase('vf'),1000); resetDefib(); }}
+function resetDefib(){ isReady=false;isCharging=false;document.getElementById('btn-charge').innerText="Charge";const s=document.getElementById('btn-shock');s.disabled=true;s.classList.remove('ready');}
+function toggleNIBP(){
+    const b=document.getElementById('btn-nibp'); 
+    if(b.innerText==="Start"){ 
+        b.innerText="Stop"; b.classList.add('active'); document.getElementById('val-sys').innerText="--";document.getElementById('val-dia').innerText="--"; 
+        setTimeout(()=>{
+            b.innerText="Start";b.classList.remove('active');
+            document.getElementById('val-sys').innerText=ECG_DATABASE[curKey].sys;
+            document.getElementById('val-dia').innerText=ECG_DATABASE[curKey].dia;
+        },3000); 
+    } else { 
+        b.innerText="Start"; b.classList.remove('active'); 
+    }
+}

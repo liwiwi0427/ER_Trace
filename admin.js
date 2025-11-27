@@ -1,18 +1,9 @@
-function generate() {
-    const key = document.getElementById('a-key').value;
+function gen() {
+    const k = document.getElementById('a-key').value;
     const t = document.getElementById('a-title').value;
-    // ... get others
+    const tg = document.getElementById('a-tag').value;
     
-    // Template
-    const json = `
-    '${key}': { 
-        t: "${t}", b: "Custom", c: "#9c27b0", 
-        shock: false, hr: 80, sys: 120, dia: 80, 
-        vis: 'nsr', 
-        cri: ["Criterion 1"], patho: "Desc...", 
-        cause: ["Cause 1"], rx: ["Treat 1"] 
-    },`;
+    const code = `'${k}': { t:"${t}", b:"${tg}", c:"#999", shock:false, hr:80, sys:120, dia:80, spo2:98, rr:16, temp:37.0, vis:'nsr', cri:["Feature 1"], patho:"Patho...", cause:["C1"], rx:["Rx1"], n:["Note 1"] },`;
     
-    document.getElementById('output').innerText = json;
-    alert("Copy the green text and paste it into data.js!");
+    document.getElementById('output').innerText = code;
 }

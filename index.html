@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECG Pro V11.5 - Final Fix</title>
+    <title>ECG Pro V12.0 - Medical Standard</title>
     <link rel="stylesheet" href="style.css">
     <script>
         if (!localStorage.getItem('ecg_username')) { window.location.replace('login.html'); }
@@ -14,16 +14,16 @@
 <aside>
     <div class="brand">
         <span>⚡ ECG Pro</span>
-        <span class="ver-badge">V11.5</span>
+        <span class="ver-badge">V12.0</span>
     </div>
     
     <div class="theme-selector">
         <label>🎨 介面風格</label>
         <select id="theme-select" onchange="changeTheme(this.value)">
-            <option value="dark">經典深色 (Dark)</option>
-            <option value="light">臨床明亮 (Light)</option>
-            <option value="retro">復古監測 (Retro)</option>
-            <option value="cyber">賽博龐克 (Cyber)</option>
+            <option value="dark">🏥 專業醫療黑 (Clinical Dark)</option>
+            <option value="light">☀️ 日間病房白 (Day Light)</option>
+            <option value="retro">📺 復古螢光 (Retro CRT)</option>
+            <option value="cyber">🤖 賽博未來 (Cyberpunk)</option>
         </select>
     </div>
 
@@ -60,7 +60,6 @@
 </aside>
 
 <main>
-    <!-- 上方監控區 -->
     <div class="top-deck">
         <div class="monitor-frame">
             <div class="monitor-screen">
@@ -73,6 +72,7 @@
                 <div class="med-log" id="med-log"></div>
                 <canvas id="ecgCanvas"></canvas>
             </div>
+            <!-- 數值面板：顏色已修正 -->
             <div class="vitals-panel">
                 <div class="vital-row c-hr"><span class="lbl">HR</span><span class="val" id="val-hr">--</span><span class="unit">bpm</span></div>
                 <div class="vital-row c-bp">
@@ -106,24 +106,28 @@
         </div>
     </div>
 
-    <!-- 下方教學區 -->
     <div class="edu-container">
         <div class="anatomy-box">
-            <div class="box-header">Conduction System</div>
-            <svg class="heart-svg" viewBox="0 0 300 350">
-                <!-- 1. 心肌底圖 (灰色) -->
+            <div class="box-header">Detailed Conduction</div>
+            <!-- 修正後的精確解剖圖 -->
+            <svg class="heart-svg" viewBox="0 0 300 350" style="overflow:visible;">
+                <!-- 底圖 -->
                 <path id="heart-muscle" class="path-heart" d="M150 330 C 50 300, 20 180, 20 120 C 20 60, 80 20, 150 90 C 220 20, 280 60, 280 120 C 280 180, 250 300, 150 330 Z" />
                 
-                <!-- 2. 傳導路徑 (黃色線條) -->
-                <!-- 修正：路徑方向從上往下畫，讓 stroke-dashoffset 動畫能產生流動感 -->
-                <path id="path-atria" class="path-conduction" d="M80 80 Q 115 110 150 140" />
-                <path id="path-vent" class="path-conduction" d="M150 140 L 150 190 L 100 260 M 150 190 L 200 260" />
+                <!-- 1. Internodal Pathways (結間路徑) -->
+                <path id="path-internodal" class="path-conduction" d="M80 80 Q 115 110 150 140" data-name="Internodal Pathways (結間路徑)" />
                 
-                <!-- 3. 節點 (圓點) -->
-                <circle id="node-sa" class="node" cx="80" cy="80" r="8" />
-                <circle id="node-av" class="node" cx="150" cy="140" r="6" />
+                <!-- 2. Bundle of His (希氏束) -->
+                <path id="path-his" class="path-conduction" d="M150 140 L 150 175" data-name="Bundle of His (希氏束)" />
                 
-                <!-- 4. 病理標示 -->
+                <!-- 3. Bundle Branches (左右束支/柏金氏) -->
+                <path id="path-branches" class="path-conduction" d="M150 175 L 100 260 M 150 175 L 200 260" data-name="Bundle Branches / Purkinje (束支/柏金氏)" />
+                
+                <!-- Nodes -->
+                <circle id="node-sa" class="node" cx="80" cy="80" r="9" data-name="SA Node (竇房結)" />
+                <circle id="node-av" class="node" cx="150" cy="140" r="7" data-name="AV Node (房室結)" />
+                
+                <!-- 異常圖示 -->
                 <rect id="vis-block" class="block-bar" x="135" y="145" width="30" height="8" rx="2" />
                 <circle id="vis-psvt" cx="150" cy="140" r="15" class="reentry-ring" style="display:none;"/>
                 <g id="vis-tdp" style="display:none;">
@@ -131,7 +135,8 @@
                     <circle class="flash-dot" cx="180" cy="250" r="6" style="animation-delay:0.2s"/>
                 </g>
             </svg>
-            <p id="anatomy-text">Normal Conduction</p>
+            <!-- 互動顯示名稱 -->
+            <p id="anatomy-text" style="color:var(--c-spo2); font-size:0.9rem; margin-top:15px; font-weight:bold; height:20px;">Normal Conduction</p>
         </div>
 
         <div class="content-box">
@@ -145,31 +150,30 @@
                 <button class="tab-btn" onclick="setTab('rx')">處置 (Rx)</button>
             </div>
             <div class="tab-viewport">
-                <!-- 美化後的內容區塊 -->
                 <div id="tab-overview" class="tab-content active">
                     <div id="alert-box"></div>
                     <div class="info-card">
-                        <h4>📋 心電圖判讀標準</h4>
+                        <h4>📋 判讀標準</h4>
                         <ul id="list-criteria" class="styled-list"></ul>
                     </div>
                 </div>
                 <div id="tab-patho" class="tab-content">
                     <div class="info-card">
-                        <h4>🧬 病理機轉</h4>
+                        <h4>🧬 機轉</h4>
                         <p id="txt-patho" class="text-body"></p>
                     </div>
                     <div class="info-card mt-10">
-                        <h4>🔍 常見成因</h4>
+                        <h4>🔍 成因</h4>
                         <ul id="list-causes" class="styled-list"></ul>
                     </div>
                 </div>
                 <div id="tab-rx" class="tab-content">
                     <div class="info-card">
-                        <h4>💊 ACLS 治療指引</h4>
+                        <h4>💊 ACLS / Rx</h4>
                         <ul id="list-rx" class="styled-list list-rx"></ul>
                     </div>
                     <div class="info-card mt-10">
-                        <h4>❤️ 護理重點</h4>
+                        <h4>❤️ Nursing</h4>
                         <ul id="list-nurse" class="styled-list list-nurse"></ul>
                     </div>
                 </div>
@@ -178,15 +182,14 @@
     </div>
 </main>
 
-<!-- Modal -->
 <div id="info-modal" class="modal">
     <div class="modal-content">
         <div class="modal-header"><span>System Info</span><span class="close-btn" onclick="closeModal()">✕</span></div>
         <div class="modal-body">
-            <p><strong>ECG Pro Simulator V11.5</strong></p>
-            <p>Current User: <span id="modal-user-name">--</span></p>
-            <hr style="margin:10px 0; border:0; border-top:1px solid var(--border-color);">
-            <p style="font-size:0.8rem; opacity:0.7;">僅供教學使用，非醫療器材。</p>
+            <p><strong>ECG Pro Simulator V12.0</strong></p>
+            <p>User: <span id="modal-user-name">--</span></p>
+            <hr>
+            <p style="font-size:0.8rem; opacity:0.7;">僅供教學使用。</p>
         </div>
     </div>
 </div>

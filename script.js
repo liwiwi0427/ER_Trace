@@ -33,6 +33,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
+    
+    // 初始化 SVG Hover 互動
+    initHoverEffects();
 
     if (DATA) {
         loadCase('nsr');
@@ -49,8 +52,23 @@ function resizeCanvas() {
     }
 }
 
+function initHoverEffects() {
+    const textEl = document.getElementById('anatomy-text');
+    const elements = document.querySelectorAll('.node, .path-conduction');
+    
+    elements.forEach(el => {
+        el.addEventListener('mouseenter', () => {
+            const name = el.getAttribute('data-name');
+            if(name) textEl.innerText = name;
+        });
+        el.addEventListener('mouseleave', () => {
+            textEl.innerText = "Normal Conduction";
+        });
+    });
+}
+
 // =================================================
-// 3. CORE LOGIC: LOAD CASE
+// 3. CORE LOGIC
 // =================================================
 function loadCase(k) {
     if (!DATA || !DATA[k]) return;
@@ -87,13 +105,13 @@ function loadCase(k) {
             alertBox.style.backgroundColor = 'rgba(255, 152, 0, 0.15)';
             alertBox.style.border = '2px solid #ff9800';
             alertBox.style.color = '#ff9800';
-            alertBox.innerHTML = "⚡ SHOCKABLE RHYTHM (建議電擊)";
+            alertBox.innerHTML = "⚡ SHOCKABLE RHYTHM";
         } else if (k === 'pea' || k === 'asystole') {
             alertBox.style.display = 'block';
             alertBox.style.backgroundColor = 'rgba(244, 67, 54, 0.15)';
             alertBox.style.border = '2px solid #f44336';
             alertBox.style.color = '#f44336';
-            alertBox.innerHTML = "⛔ NON-SHOCKABLE (僅 CPR/給藥)";
+            alertBox.innerHTML = "⛔ NON-SHOCKABLE";
         } else {
             alertBox.style.display = 'none';
         }
@@ -103,12 +121,11 @@ function loadCase(k) {
 }
 
 // =================================================
-// 4. HEART ANIMATION LOGIC (全新修正)
+// 4. NEW ANATOMY LOOP (More Detailed)
 // =================================================
 function runAnatomyLoop(type) {
-    // Reset All
-    const elements = ['node-sa', 'node-av', 'path-atria', 'path-vent', 'heart-muscle'];
-    elements.forEach(id => {
+    const ids = ['node-sa', 'node-av', 'path-internodal', 'path-his', 'path-branches', 'heart-muscle'];
+    ids.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.classList.remove('active-node', 'flowing', 'mech-fail');
@@ -119,63 +136,55 @@ function runAnatomyLoop(type) {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
-    if(document.getElementById('anatomy-text')) document.getElementById('anatomy-text').innerText = "";
 
-    // Animation Sequence
     const sequence = () => {
-        // 1. 正常傳導 / 緩脈 / PEA
         if (type === 'nsr' || type === 'sb' || type === 'pea') {
             const rate = (type === 'sb') ? 1300 : 900;
             
-            // Step 1: SA Node Firing (0ms)
+            // 1. SA Node
             activateNode('node-sa', 100);
             
-            // Step 2: Atrial Path Flow (50ms)
-            schedule(() => activatePath('path-atria'), 50);
+            // 2. Internodal (Atria)
+            schedule(() => activatePath('path-internodal'), 50);
             
-            // Step 3: AV Node Firing (250ms - slight delay)
-            schedule(() => activateNode('node-av', 150), 250);
+            // 3. AV Node (Pause)
+            schedule(() => activateNode('node-av', 150), 200);
             
-            // Step 4: Ventricular Path Flow (300ms)
+            // 4. Bundle of His
+            schedule(() => activatePath('path-his'), 350);
+            
+            // 5. Branches & Muscle
             schedule(() => {
-                activatePath('path-vent');
+                activatePath('path-branches');
                 if (type !== 'pea') pulseMuscle();
-            }, 350);
+            }, 400);
 
             if (type === 'pea') document.getElementById('heart-muscle').classList.add('mech-fail');
             schedule(sequence, rate);
         }
-        // 2. 傳導阻滯 (Blocks)
         else if (type && type.includes('block')) {
-            const blockEl = document.getElementById('vis-block');
-            if(blockEl) blockEl.style.display = 'block';
-            
+            document.getElementById('vis-block').style.display = 'block';
             activateNode('node-sa', 100);
-            schedule(() => activatePath('path-atria'), 50);
+            schedule(() => activatePath('path-internodal'), 50);
             
             if (type === 'avb1') {
-                // 延長 PR: AV 較晚亮
-                schedule(() => activateNode('node-av', 150), 500);
-                schedule(() => { activatePath('path-vent'); pulseMuscle(); }, 650);
-            } else if (type === 'avb3') {
-                // 房室分離: AV node 獨立跳動
-                schedule(() => activateNode('node-av', 150), 600); 
-                schedule(() => { activatePath('path-vent'); pulseMuscle(); }, 750);
+                schedule(() => activateNode('node-av', 150), 550); // Long PR
+                schedule(() => activatePath('path-his'), 700);
+                schedule(() => { activatePath('path-branches'); pulseMuscle(); }, 750);
+            } else if(type === 'avb3') {
+                schedule(() => activateNode('node-av', 100), 600); // Independent
             }
-            schedule(sequence, 1100);
+            schedule(sequence, 1200);
         }
-        // 3. 快速心律 (PSVT / Flutter)
         else if (type === 'psvt' || type === 'afl') {
             document.getElementById('vis-psvt').style.display = 'block';
-            pulseMuscle(300); // 快縮
+            pulseMuscle(300);
             schedule(sequence, 350);
         }
-        // 4. 室性心律 (VT / VF)
         else if (type && (type.includes('vt') || type === 'vf' || type === 'tdp')) {
             if (type === 'tdp') document.getElementById('vis-tdp').style.display = 'block';
-            
-            // 逆向或亂流：直接亮心室路徑
-            activatePath('path-vent'); 
+            // Retrograde or chaotic
+            activatePath('path-branches'); 
             if (type.includes('vt')) pulseMuscle(300);
             schedule(sequence, (type === 'vf') ? 200 : 450);
         }
@@ -195,9 +204,8 @@ function activateNode(id, duration) {
 function activatePath(id) {
     const el = document.getElementById(id);
     if (el) {
-        // 移除並重新加入 class 以重啟 CSS 動畫
         el.classList.remove('flowing');
-        void el.offsetWidth; // Trigger reflow
+        void el.offsetWidth; 
         el.classList.add('flowing');
     }
 }
@@ -217,7 +225,7 @@ function schedule(fn, ms) {
 }
 
 // =================================================
-// 5. ECG WAVEFORM
+// 5. DRAWING
 // =================================================
 function getWaveY(time) {
     const centerY = canvas.height / 2;
@@ -230,26 +238,19 @@ function getWaveY(time) {
     if (['nsr', 'sb', 'pea', 'avb1'].includes(curKey)) {
         const rate = (curKey === 'sb') ? 1300 : 850;
         const phase = t % rate;
-        // P
-        y += gaussian(phase, 100, 30, -8);
-        // QRS
+        y += gaussian(phase, 100, 30, -8); // P
         if (phase > 230 && phase < 270) {
             y += (phase > 248 && phase < 252) ? 50 : -15;
             if (phase > 240 && phase < 260) y += (phase % 2 === 0) ? -40 : 40;
         }
-        // T
-        y += gaussian(phase, 450, 60, -12);
-    } 
-    else if (curKey === 'vf') {
+        y += gaussian(phase, 450, 60, -12); // T
+    } else if (curKey === 'vf') {
         y += Math.sin(t * 0.01) * 20 + Math.sin(t * 0.03) * 15 + (Math.random()-0.5)*10;
-    } 
-    else if (curKey.includes('vt')) {
+    } else if (curKey.includes('vt')) {
         y += Math.sin((t % 350) / 350 * Math.PI * 2) * 60;
-    } 
-    else if (curKey === 'asystole') {
+    } else if (curKey === 'asystole') {
         y += (Math.random() - 0.5) * 2;
-    } 
-    else {
+    } else {
         y += (Math.random() - 0.5) * 5;
     }
     return centerY + y;
@@ -258,7 +259,6 @@ function getWaveY(time) {
 function gaussian(x, c, w, h) { return h * Math.exp(-Math.pow(x - c, 2) / (2 * w * w)); }
 
 function draw() {
-    // 配合主題顏色
     let style = getComputedStyle(document.body);
     let bg = style.getPropertyValue('--bg-monitor').trim();
     let waveColor = getComputedStyle(document.documentElement).getPropertyValue('--c-hr').trim();
@@ -283,21 +283,20 @@ function draw() {
 }
 
 // =================================================
-// 6. UTILS & INTERACTION
+// 6. UTILS
 // =================================================
 function updateVitalsUI(d) {
-    if(document.getElementById('val-sys')) document.getElementById('val-sys').innerText = d.sys;
-    if(document.getElementById('val-dia')) document.getElementById('val-dia').innerText = d.dia;
-    if(document.getElementById('val-spo2')) document.getElementById('val-spo2').innerText = d.spo2;
-    if(document.getElementById('val-rr')) document.getElementById('val-rr').innerText = d.rr;
-    if(document.getElementById('val-temp')) document.getElementById('val-temp').innerText = d.temp;
+    const els = {sys:'val-sys', dia:'val-dia', spo2:'val-spo2', rr:'val-rr', temp:'val-temp'};
+    for(let k in els) {
+        const el = document.getElementById(els[k]);
+        if(el) el.innerText = d[k];
+    }
 }
 
 function fluctuateVitals() {
     if (DATA && DATA[curKey] && typeof DATA[curKey].hr === 'number') {
         const v = Math.floor(Math.random() * 3) - 1;
-        const el = document.getElementById('val-hr');
-        if(el) el.innerText = DATA[curKey].hr + v;
+        document.getElementById('val-hr').innerText = DATA[curKey].hr + v;
     }
 }
 
@@ -307,19 +306,17 @@ function fill(id, arr) {
 }
 
 function changeTheme(theme) {
-    if (theme === 'dark') document.body.removeAttribute('data-theme');
-    else document.body.setAttribute('data-theme', theme);
+    theme === 'dark' ? document.body.removeAttribute('data-theme') : document.body.setAttribute('data-theme', theme);
 }
 
 function toggleNIBP() {
     const btn = document.getElementById('btn-nibp');
     if (btn.innerText.includes("測量")) {
-        btn.innerText = "測量中...";
+        btn.innerText = "Running...";
         btn.classList.add('active');
         document.getElementById('val-sys').innerText = "--";
         setTimeout(() => {
-            btn.innerText = "測量";
-            btn.classList.remove('active');
+            btn.innerText = "測量"; btn.classList.remove('active');
             if(DATA) updateVitalsUI(DATA[curKey]);
         }, 3000);
     }
@@ -329,7 +326,8 @@ function giveDrug(d) {
     const log = document.getElementById('med-log');
     const div = document.createElement('div');
     div.className = 'log-item'; div.innerText = `💉 Give ${d.toUpperCase()}`;
-    log.appendChild(div); setTimeout(()=>div.remove(), 4000);
+    log.appendChild(div);
+    setTimeout(() => div.remove(), 4000);
     if (d === 'adenosine' && curKey === 'psvt') setTimeout(() => loadCase('nsr'), 2000);
 }
 
@@ -338,12 +336,9 @@ function charge() {
         isCharging = true;
         document.getElementById('btn-charge').innerText = "CHARGING";
         setTimeout(() => {
-            isCharging = false;
-            isReady = true;
+            isCharging = false; isReady = true;
             document.getElementById('btn-charge').innerText = "READY";
-            const shockBtn = document.getElementById('btn-shock');
-            shockBtn.disabled = false;
-            shockBtn.classList.add('ready');
+            const b = document.getElementById('btn-shock'); b.disabled = false; b.classList.add('ready');
         }, 2000);
     }
 }
@@ -351,41 +346,26 @@ function charge() {
 function shock() {
     if (isReady) {
         shockFx = 30;
-        const flash = document.getElementById('screen-flash');
-        if(flash) {
-            flash.classList.add('flash-anim');
-            setTimeout(() => flash.classList.remove('flash-anim'), 200);
-        }
-        
+        const f = document.getElementById('screen-flash');
+        if(f) { f.classList.add('flash-anim'); setTimeout(()=>f.classList.remove('flash-anim'), 200); }
         if (DATA && DATA[curKey].shock) setTimeout(() => loadCase('nsr'), 1000);
         else if (curKey !== 'asystole') setTimeout(() => loadCase('vf'), 1000);
-        
         resetDefib();
     }
 }
 
 function resetDefib() {
-    isReady = false;
-    document.getElementById('btn-charge').innerText = "CHARGE";
-    const shockBtn = document.getElementById('btn-shock');
-    shockBtn.disabled = true;
-    shockBtn.classList.remove('ready');
+    isReady = false; document.getElementById('btn-charge').innerText = "CHARGE";
+    const b = document.getElementById('btn-shock'); b.disabled = true; b.classList.remove('ready');
 }
 
 function setTab(id) {
     document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
-    const targetContent = document.getElementById(`tab-${id}`);
-    if(targetContent) targetContent.classList.add('active');
-
+    document.getElementById(`tab-${id}`).classList.add('active');
     document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
     if (event) event.target.classList.add('active');
 }
 
 function openModal() { document.getElementById('info-modal').style.display = 'flex'; }
 function closeModal() { document.getElementById('info-modal').style.display = 'none'; }
-function logout() {
-    if (confirm('確定要登出嗎？')) {
-        localStorage.removeItem('ecg_username');
-        window.location.replace('login.html');
-    }
-}
+function logout() { if (confirm('Logout?')) { localStorage.removeItem('ecg_username'); window.location.replace('login.html'); } }

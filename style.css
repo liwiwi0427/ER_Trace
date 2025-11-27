@@ -1,120 +1,304 @@
-/* =========================================
-   CORE VARIABLES & MEDICAL COLORS
-   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+/* ================= THEME VARIABLES ================= */
 :root {
-    /* 🏥 臨床標準監測配色 (嚴格執行) */
-    --c-hr: #00ff00;    /* HR: 綠 */
-    --c-spo2: #00b0ff;  /* SpO2: 醫用亮藍 */
+    /* 🏥 現代醫療儀表板配色 */
+    --bg-main: #0b1120;
+    --bg-panel: rgba(30, 41, 59, 0.7); /* 半透明面板 */
+    --bg-card: rgba(15, 23, 42, 0.6);
+    --border: rgba(255, 255, 255, 0.1);
+    
+    /* 醫療監測色 (符合您的臨床要求) */
+    --c-hr: #00e676;    /* HR: 螢光綠 */
+    --c-spo2: #00b0ff;  /* SpO2: 亮藍 */
     --c-bp: #ffffff;    /* NIBP: 純白 */
-    --c-rr: #ffff00;    /* RR: 亮黃 */
-    --c-temp: #ff3333;  /* Temp: 亮紅 */
-
+    --c-rr: #ffeb3b;    /* RR: 亮黃 */
+    --c-temp: #ff5252;  /* Temp: 亮紅 */
+    
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --btn-hover: rgba(255,255,255,0.15);
+    
     /* 解剖圖配色 */
-    --anat-bg: rgba(255,255,255,0.05);
-    --anat-outline: #555;
-    --anat-wire-off: #333;
-    --anat-wire-on: #ffff00;
-
-    /* 介面系統色 (Dark Default) */
-    --bg-app: #121212; --bg-panel: #1e1e1e; --bg-monitor: #000000;
-    --border-col: #333; --text-main: #e0e0e0; --text-muted: #888;
-    --btn-hover: rgba(255,255,255,0.1);
+    --anat-line-dim: #334155;
+    --anat-line-active: #facc15;
+    
+    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
 }
 
-/* THEME: Light */
 [data-theme="light"] {
-    --bg-app: #f0f2f5; --bg-panel: #fff; --bg-monitor: #fff;
-    --border-col: #ccc; --text-main: #222; --text-muted: #666; --btn-hover: #e9ecef;
-    --anat-outline: #bbb; --anat-wire-off: #ddd; --anat-wire-on: #ffa500;
-    /* Light Mode colors need contrast adjustment */
-    --c-hr: #008800; --c-spo2: #0066cc; --c-bp: #333; --c-rr: #cc9900; --c-temp: #cc0000;
+    --bg-main: #f1f5f9;
+    --bg-panel: #ffffff;
+    --bg-card: #e2e8f0;
+    --border: #cbd5e1;
+    --text-main: #0f172a;
+    --c-hr: #00a000;
 }
 
-/* THEME: Cyber */
-[data-theme="cyber"] {
-    --bg-app: #03030f; --bg-panel: #0b0b1a; --bg-monitor: #000;
-    --border-col: #00ffff; --text-main: #00ffff; --text-muted: #008888;
-    --anat-wire-on: #00ffff; --anat-wire-off: #002233;
+/* ================= RESET & LAYOUT ================= */
+* { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
+body { 
+    font-family: 'Inter', sans-serif; 
+    background-color: var(--bg-main);
+    background-image: radial-gradient(circle at top right, rgba(0,255,0,0.03), transparent 40%);
+    color: var(--text-main); 
+    height: 100vh; 
+    display: flex; 
+    overflow: hidden; 
 }
 
-/* ================= LAYOUT ================= */
-* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-body { font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; background: var(--bg-app); color: var(--text-main); overflow: hidden; }
+/* ================= SIDEBAR (左側選單) ================= */
+aside {
+    width: 260px;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    display: flex; flex-direction: column;
+    z-index: 10;
+}
 
-/* Sidebar */
-aside { width: 240px; background: var(--bg-panel); border-right: 1px solid var(--border-col); display: flex; flex-direction: column; }
-.brand { padding: 15px; font-size: 1.2rem; font-weight: 900; color: var(--c-hr); border-bottom: 1px solid var(--border-col); }
-.nav-scroll { flex: 1; overflow-y: auto; padding: 10px; }
-.nav-btn { padding: 8px; margin-bottom: 2px; cursor: pointer; color: var(--text-muted); border-left: 3px solid transparent; display: flex; justify-content: space-between; transition: 0.2s; }
-.nav-btn:hover { background: var(--btn-hover); color: var(--text-main); }
-.nav-btn.active { border-left-color: var(--c-hr); color: #fff; background: rgba(255,255,255,0.05); }
-.footer { border-top: 1px solid var(--border-col); padding: 10px; display: flex; }
-.icon-btn { flex: 1; border: none; background: transparent; color: var(--text-muted); cursor: pointer; padding: 5px; font-size: 1.2rem; }
-.icon-btn:hover { color: var(--text-main); }
+.brand {
+    padding: 20px;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--c-hr);
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.2);
+    display: flex; align-items: center; justify-content: space-between;
+}
+.brand span { font-size: 0.7rem; background: var(--bg-card); color: var(--text-muted); padding: 2px 6px; border-radius: 4px; }
 
-/* Main Area */
-main { flex: 1; display: flex; flex-direction: column; }
-.top-deck { flex: 0 0 380px; display: flex; border-bottom: 1px solid var(--border-col); }
+/* 選單按鈕優化 */
+.nav-scroll { flex: 1; overflow-y: auto; padding: 15px; }
+.cat-header {
+    font-size: 0.7rem; color: var(--text-muted); 
+    text-transform: uppercase; letter-spacing: 1px; font-weight: 700;
+    margin: 15px 0 8px 5px;
+}
+.nav-btn {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    opacity: 0.7;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+.nav-btn:hover { background: var(--btn-hover); opacity: 1; transform: translateX(3px); }
+.nav-btn.active {
+    background: rgba(0, 230, 118, 0.1);
+    color: var(--c-hr);
+    opacity: 1;
+    border-left-color: var(--c-hr);
+    font-weight: 600;
+    box-shadow: 0 0 15px rgba(0, 230, 118, 0.1);
+}
 
-/* Monitor & Vitals */
-.monitor-group { flex: 1; display: flex; position: relative; }
-.screen { flex: 1; background: var(--bg-monitor); position: relative; overflow: hidden; border-right: 1px solid #333; }
+.dot { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 5px currentColor; }
+.norm { color: #4caf50; background: currentColor; }
+.warn { color: #ff9800; background: currentColor; }
+.crit { color: #f44336; background: currentColor; }
+.spec { color: #d8b4fe; background: currentColor; }
+
+.footer { border-top: 1px solid var(--border); padding: 15px; display: flex; gap: 10px; }
+.icon-btn {
+    flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted); cursor: pointer; transition: 0.2s;
+}
+.icon-btn:hover { background: var(--btn-hover); color: var(--text-main); }
+
+/* ================= MAIN CONTENT (右側主區) ================= */
+main { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 10px; gap: 10px; }
+
+/* --- 1. MONITOR DECK (監視器) --- */
+.top-deck { flex: 0 0 45%; display: flex; gap: 10px; }
+
+/* 監視器邊框與效果 */
+.monitor-frame {
+    flex: 1; 
+    background: #000; 
+    border-radius: 12px; 
+    border: 2px solid #333; 
+    box-shadow: inset 0 0 20px #000;
+    display: flex; overflow: hidden; position: relative;
+}
+
+/* 心電圖畫布區 */
+.monitor-screen { flex: 1; position: relative; overflow: hidden; }
+.grid { 
+    position: absolute; inset: 0; opacity: 0.2; 
+    background-image: linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px);
+    background-size: 25px 25px; pointer-events: none;
+}
+.overlay-info { position: absolute; top: 15px; left: 20px; font-family: 'JetBrains Mono', monospace; pointer-events: none; z-index: 5; }
+.overlay-info .mode { color: var(--c-hr); font-size: 1.1rem; font-weight: bold; text-shadow: 0 0 10px rgba(0,255,0,0.4); }
+.overlay-info .staff { color: var(--c-spo2); font-size: 0.85rem; margin-top: 5px; opacity: 0.8; }
+
+.med-log { position: absolute; top: 15px; right: 20px; text-align: right; z-index: 5; font-family: monospace; font-size: 0.85rem; }
+.log-line { color: #fff; background: rgba(0,0,0,0.5); padding: 2px 6px; margin-bottom: 2px; border-left: 3px solid gold; animation: fadeInRight 0.3s; }
+
 canvas { display: block; width: 100%; height: 100%; }
-.overlay { position: absolute; top: 10px; left: 15px; font-family: 'Consolas', monospace; z-index: 10; pointer-events: none; }
-.vitals { width: 140px; background: #000; border-left: 1px solid #333; display: flex; flex-direction: column; padding: 10px; }
-.v-row { text-align: right; position: relative; flex: 1; display: flex; flex-direction: column; justify-content: center; }
-.v-lbl { font-size: 0.7rem; position: absolute; top: 0; right: 0; font-weight: bold; opacity: 0.8; }
-.v-val { font-size: 2rem; font-weight: bold; font-family: 'Impact', sans-serif; letter-spacing: 1px; }
-.c-hr { color: var(--c-hr); } .c-spo2 { color: var(--c-spo2); } .c-bp { color: var(--c-bp); } .c-rr { color: var(--c-rr); } .c-temp { color: var(--c-temp); }
 
-/* Controls */
-.controls { width: 220px; background: var(--bg-panel); border-left: 1px solid var(--border-col); display: flex; flex-direction: column; }
-.defib-wrap { padding: 10px; border-bottom: 1px solid var(--border-col); background: rgba(0,0,0,0.2); }
-.lcd { background: #000; color: #0f0; text-align: center; border: 2px solid #444; border-radius: 4px; font-family: monospace; font-size: 1.2rem; margin-bottom: 5px; }
-.btn-grid { display: flex; gap: 5px; }
-.action-btn { flex: 1; padding: 10px; font-weight: bold; border: none; border-radius: 3px; cursor: pointer; color: #fff; }
-.b-chg { background: #f9a825; } .b-shk { background: #333; cursor: not-allowed; } 
-.b-shk.ready { background: #d50000; animation: blink 0.5s infinite; }
-.meds-list { flex: 1; overflow-y: auto; padding: 10px; }
-.drug-btn { width: 100%; background: transparent; border: 1px solid var(--border-col); color: var(--text-main); padding: 8px; text-align: left; margin-bottom: 5px; border-left: 4px solid #555; cursor: pointer; transition: 0.2s; }
-.drug-btn:hover { background: var(--btn-hover); transform: translateX(2px); }
+/* 生命徵象欄 (右側) */
+.vitals-bar {
+    width: 160px; background: rgba(10,10,10,0.9);
+    border-left: 1px solid #333;
+    display: flex; flex-direction: column; padding: 10px;
+}
+.vital-box {
+    flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: flex-end;
+    margin-bottom: 5px; position: relative;
+    font-family: 'JetBrains Mono', monospace;
+}
+.v-label { font-size: 0.75rem; font-weight: bold; position: absolute; top: 2px; left: 0; opacity: 0.7; }
+.v-num { font-size: 2.2rem; font-weight: 700; line-height: 1; letter-spacing: -1px; text-shadow: 0 0 5px currentColor; }
+.v-unit { font-size: 0.65rem; opacity: 0.6; }
 
-/* Education & Anatomy */
-.edu-deck { flex: 1; display: grid; grid-template-columns: 300px 1fr; gap: 15px; padding: 15px; overflow: hidden; }
-.panel { background: rgba(255,255,255,0.02); border: 1px solid var(--border-col); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+/* 顏色綁定 */
+.box-hr { color: var(--c-hr); }
+.box-bp { color: var(--c-bp); }
+.box-spo2 { color: var(--c-spo2); }
+.box-rr { color: var(--c-rr); }
+.box-temp { color: var(--c-temp); }
+
+.nibp-btn {
+    margin-top: 5px; background: #222; border: 1px solid #444; color: #ccc;
+    font-size: 0.75rem; padding: 4px; width: 100%; border-radius: 4px; cursor: pointer; transition: 0.2s;
+}
+.nibp-btn:hover { background: #333; border-color: #666; }
+.nibp-btn.active { background: #fff; color: #000; font-weight: bold; border-color: #fff; animation: pulse 1s infinite; }
+
+/* 控制面板 (最右側) */
+.control-deck {
+    width: 220px; display: flex; flex-direction: column; gap: 10px;
+}
+.ctrl-card {
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; display: flex; flex-direction: column;
+}
+.joule-lcd { 
+    background: #000; border: 2px solid #333; color: #ccff00; 
+    font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; text-align: center;
+    border-radius: 4px; padding: 5px; margin-bottom: 10px;
+}
+.btn-row { display: flex; gap: 5px; }
+.btn-action {
+    flex: 1; border: none; padding: 12px; font-weight: 700; font-size: 0.8rem; border-radius: 4px; cursor: pointer; color: #fff;
+    transition: transform 0.1s;
+}
+.btn-action:active { transform: scale(0.95); }
+.btn-charge { background: #ff9100; color: #000; }
+.btn-shock { background: #444; color: #888; cursor: not-allowed; }
+.btn-shock.ready { background: #ff1744; color: #fff; animation: blink 0.5s infinite; box-shadow: 0 0 15px rgba(255, 23, 68, 0.6); }
+
+.meds-list { flex: 1; overflow-y: auto; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 8px; }
+.drug-item {
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border); 
+    margin-bottom: 5px; padding: 10px; border-radius: 4px; font-size: 0.85rem;
+    cursor: pointer; border-left: 4px solid #555; transition: 0.2s;
+    display: flex; justify-content: space-between; color: var(--text-main);
+}
+.drug-item:hover { background: var(--btn-hover); padding-left: 15px; }
+
+/* --- 2. EDUCATION DECK (下方) --- */
+.edu-deck {
+    flex: 1; display: grid; grid-template-columns: 320px 1fr; gap: 10px; overflow: hidden;
+}
+.glass-panel {
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 12px; box-shadow: var(--shadow-card);
+    display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* 解剖圖區 */
+.anatomy-wrap { 
+    position: relative; display: flex; align-items: center; justify-content: center; height: 100%; 
+    background: radial-gradient(circle at center, rgba(255,255,255,0.02), transparent);
+}
+.anat-tip { 
+    position: absolute; bottom: 10px; left: 0; width: 100%; 
+    text-align: center; color: var(--text-muted); font-size: 0.9rem; font-weight: bold; 
+    height: 20px; transition: 0.2s;
+}
 
 /* SVG Styles */
-.svg-wrap { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; }
-.path-muscle { fill: none; stroke: var(--anat-outline); stroke-width: 2; transition: 0.3s; }
-.path-wire { fill: none; stroke: var(--anat-wire-off); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 80; stroke-dashoffset: 80; opacity: 0.3; transition: 0.2s; cursor: help; pointer-events: stroke; }
-.path-wire:hover { stroke: #fff; opacity: 1; }
-.path-wire.active { stroke: var(--anat-wire-on); opacity: 1; animation: flow 0.4s linear forwards; filter: drop-shadow(0 0 5px var(--anat-wire-on)); }
-.node { fill: var(--anat-wire-off); cursor: help; }
-.node:hover { fill: #fff; }
-.node.active { fill: var(--anat-wire-on); transform: scale(1.3); transform-origin: center; filter: drop-shadow(0 0 5px var(--anat-wire-on)); }
+.path-muscle { fill: rgba(255,255,255,0.03); stroke: var(--anat-line-dim); stroke-width: 2; }
+.path-wire { 
+    fill: none; stroke: var(--anat-line-dim); stroke-width: 4; stroke-linecap: round;
+    opacity: 0.2; cursor: help; transition: 0.2s; 
+    stroke-dasharray: 100; stroke-dashoffset: 100; /* For animation */
+}
+.node { fill: var(--anat-line-dim); opacity: 0.4; cursor: help; transition: 0.2s; }
 
-/* Tabs */
-.tabs { display: flex; border-bottom: 1px solid var(--border-col); }
-.tab { flex: 1; padding: 10px; background: transparent; color: var(--text-muted); border: none; cursor: pointer; border-bottom: 2px solid transparent; }
-.tab.active { color: #0088ff; border-color: #0088ff; background: rgba(0,136,255,0.05); }
-.content-area { flex: 1; overflow-y: auto; padding: 15px; }
-.content-pane { display: none; } .content-pane.active { display: block; }
-ul.styled { padding-left: 20px; line-height: 1.6; font-size: 0.9rem; }
+.path-wire:hover, .node:hover { stroke: #fff; fill: #fff; opacity: 1; filter: drop-shadow(0 0 5px white); }
 
-/* Utils */
-.nibp-btn { width: 100%; border: 1px solid #555; background: #333; color: #fff; font-size: 0.7rem; margin-top: 5px; cursor: pointer; }
-.nibp-btn.running { background: #fff; color: #000; animation: blink 1s infinite; }
-@keyframes blink { 50% { opacity: 0.5; } }
+/* Animation Classes */
+.path-wire.flowing { 
+    stroke: var(--anat-line-active); opacity: 1; 
+    animation: flow 0.4s linear forwards; 
+    filter: drop-shadow(0 0 5px var(--anat-line-active));
+}
+.node.active { 
+    fill: var(--anat-line-active); opacity: 1; 
+    transform: scale(1.3); transform-origin: center;
+    filter: drop-shadow(0 0 8px var(--anat-line-active));
+}
+.muscle-pump { animation: pump 0.2s ease-in-out; }
+
+/* 資訊卡片區 */
+.info-header { 
+    padding: 12px 20px; background: rgba(0,0,0,0.15); 
+    display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); 
+}
+.title { font-size: 1.4rem; font-weight: 700; color: var(--c-hr); }
+.badge-tag { background: #333; color: #fff; font-size: 0.8rem; padding: 4px 8px; border-radius: 6px; font-weight: 600; }
+
+.tabs { display: flex; background: rgba(0,0,0,0.1); }
+.tab { 
+    flex: 1; padding: 12px; background: transparent; border: none; 
+    color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; 
+}
+.tab.active { color: var(--c-spo2); border-bottom-color: var(--c-spo2); background: rgba(0,176,255,0.05); }
+
+.tab-content { flex: 1; overflow-y: auto; padding: 20px; display: none; line-height: 1.7; font-size: 0.95rem; }
+.tab-content.active { display: block; animation: fadeUp 0.3s; }
+
+.content-block { margin-bottom: 20px; padding-left: 15px; border-left: 2px solid var(--border); }
+.block-head { color: var(--c-spo2); font-weight: 700; margin-bottom: 8px; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; }
+.block-list li { margin-bottom: 5px; list-style: disc; margin-left: 15px; color: var(--text-main); }
+
+#alert-banner { display: none; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 15px; font-size: 1.1rem; }
+
+/* Keyframes */
 @keyframes flow { to { stroke-dashoffset: 0; } }
+@keyframes blink { 50% { opacity: 0.5; } }
+@keyframes pump { 0% { transform: scale(1); } 50% { transform: scale(0.97); } 100% { transform: scale(1); } }
+@keyframes fadeInRight { from{opacity:0;transform:translateX(10px);}to{opacity:1;transform:translateX(0);} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
 
-/* RWD */
+/* RWD for Mobile */
 @media (max-width: 900px) {
     body { flex-direction: column; overflow-y: auto; }
-    aside { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-col); }
-    .top-deck { flex-direction: column; height: auto; }
-    .monitor-group { height: 260px; }
-    .vitals { position: absolute; right: 0; top: 0; height: 100%; background: rgba(0,0,0,0.8); border: none; width: 90px; }
-    .control-panel { height: 160px; width: 100%; flex-direction: row; border-left: none; }
-    .edu-deck { display: block; } .panel { margin-bottom: 10px; height: auto; min-height: 300px; }
-    .anatomy-box { display: none; } /* Hide heavy anatomy on mobile */
+    aside { width: 100%; height: auto; flex-direction: row; align-items: center; border-bottom: 1px solid var(--border); border-right: none; }
+    .brand { border: none; background: transparent; width: auto; font-size: 1rem; }
+    .nav-scroll { display: flex; overflow-x: auto; padding: 5px; height: 60px; flex:1; align-items: center; }
+    .cat-header { display: none; }
+    .nav-btn { min-width: 120px; margin-right: 5px; flex-direction: column; text-align: center; justify-content: center; }
+    
+    main { overflow-y: visible; height: auto; }
+    .top-deck { flex-direction: column; height: auto; gap: 10px; }
+    .monitor-frame { flex: none; height: 300px; border-radius: 8px; }
+    
+    .vitals-bar { position: absolute; right:0; top:0; height:100%; width: 85px; background: rgba(0,0,0,0.8); }
+    .v-num { font-size: 1.6rem; }
+    
+    .control-deck { width: 100%; height: auto; flex-direction: row; }
+    .ctrl-card { flex: 1; }
+    
+    .edu-deck { grid-template-columns: 1fr; height: auto; display: flex; flex-direction: column; }
+    .anatomy-wrap { display: none; } /* Hide heavy graphic on phone */
 }

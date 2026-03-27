@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="monitor">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>急診心跡 - 專業 ECG 學習系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 頂部資訊欄 -->
+        <header>
+            <div class="logo">急診心跡 <span id="rhythm-title">Normal Sinus</span></div>
+            <div class="monitor-stats">
+                <div class="stat-box">HR: <span id="hr-value">72</span></div>
+                <div class="stat-box">SpO2: <span id="spo2-value">98%</span></div>
+            </div>
+            <button id="theme-toggle">切換模式</button>
+        </header>
+
+        <!-- 心電圖顯示區 -->
+        <section class="visual-area">
+            <canvas id="ecg-canvas"></canvas>
+            <div id="heart-conduction">
+                <!-- 這裡未來可放置心臟 SVG 動畫 -->
+                <div class="heart-container">
+                    <div id="conduction-spark"></div>
+                    <p>心臟傳導路徑示意</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 操作面板 -->
+        <section class="controls">
+            <div class="control-group">
+                <h3>選擇心律</h3>
+                <div id="rhythm-list" class="button-grid"></div>
+            </div>
+            <div class="control-group">
+                <h3>急救藥物</h3>
+                <div id="drug-list" class="button-grid"></div>
+            </div>
+        </section>
+
+        <!-- 教學說明區 -->
+        <footer class="info-box">
+            <h4>判讀要點</h4>
+            <p id="rhythm-desc">正常竇性心律 (Sinus Rhythm) 是指心臟的激動起源於竇房結。</p>
+        </footer>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="theme.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,39 +1,102 @@
 :root {
-    --bg: #000; --text: #0f0; --grid: #003300; --accent: #ff0;
+    /* 監視器模式 (Dark) */
+    --bg-main: #0a0e14;
+    --panel-bg: rgba(20, 26, 35, 0.8);
+    --accent-green: #00ff41;
+    --accent-red: #ff3b3b;
+    --accent-blue: #00e5ff;
+    --text-primary: #e0e0e0;
+    --grid-color: rgba(0, 255, 65, 0.1);
+    --border-glow: 0 0 15px rgba(0, 255, 65, 0.3);
 }
 
 [data-theme="paper"] {
-    --bg: #fff; --text: #d10000; --grid: #ffcccc; --accent: #000;
+    /* 紙本模式 (Light) */
+    --bg-main: #f5f5f5;
+    --panel-bg: #ffffff;
+    --accent-green: #2e7d32;
+    --accent-red: #c62828;
+    --accent-blue: #1565c0;
+    --text-primary: #212121;
+    --grid-color: rgba(255, 0, 0, 0.15);
+    --border-glow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
+
+* { box-sizing: border-box; transition: all 0.3s ease; }
 
 body {
-    margin: 0; background-color: var(--bg); color: var(--text);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    overflow-x: hidden;
+    margin: 0; background-color: var(--bg-main); color: var(--text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.container { display: flex; flex-direction: column; height: 100vh; }
+/* 佈局架構 */
+.app-wrapper {
+    display: grid;
+    grid-template-columns: 300px 1fr 320px;
+    grid-template-rows: 70px 1fr 200px;
+    height: 100vh;
+    gap: 15px;
+    padding: 15px;
+}
 
+/* 標題與狀態列 */
 header {
-    display: flex; justify-content: space-between; padding: 10px 20px;
-    border-bottom: 2px solid var(--text); background: rgba(255,255,255,0.05);
+    grid-column: 1 / 4;
+    background: var(--panel-bg);
+    border-radius: 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 25px;
+    box-shadow: var(--border-glow);
+    backdrop-filter: blur(10px);
 }
 
-.visual-area { flex: 1; position: relative; overflow: hidden; }
+.logo { font-size: 1.5rem; font-weight: 800; letter-spacing: 2px; color: var(--accent-green); }
 
-canvas { width: 100%; height: 350px; background-image: 
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-    background-size: 20px 20px;
+/* ECG 監視中心 */
+.monitor-container {
+    grid-column: 2 / 3;
+    background: #000;
+    border-radius: 15px;
+    position: relative;
+    overflow: hidden;
+    border: 2px solid #333;
 }
 
-.button-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; padding: 10px; }
+canvas { width: 100%; height: 100%; }
+
+/* 右側：心臟傳導動畫 */
+.heart-path-panel {
+    grid-column: 3 / 4;
+    background: var(--panel-bg);
+    border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; padding: 20px;
+}
+
+.heart-svg { width: 200px; filter: drop-shadow(0 0 10px var(--accent-red)); }
+
+/* 下方控制台 */
+.dock-panel {
+    grid-column: 1 / 4;
+    background: var(--panel-bg);
+    border-radius: 12px;
+    display: grid; grid-template-columns: 1fr 1fr 1.5fr;
+    gap: 20px; padding: 15px;
+}
+
+.control-card h3 { font-size: 0.9rem; color: var(--accent-blue); margin-top: 0; }
+
+.btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 
 button {
-    background: transparent; border: 1px solid var(--text); color: var(--text);
-    padding: 8px; cursor: pointer; transition: 0.3s;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-primary); padding: 10px; border-radius: 6px; cursor: pointer;
+    font-size: 0.8rem;
 }
 
-button:hover { background: var(--text); color: var(--bg); }
+button:hover { background: var(--accent-blue); color: #000; transform: translateY(-2px); }
 
-.info-box { padding: 15px; background: rgba(0,0,0,0.5); border-top: 1px solid var(--text); }
+.btn-drug { border-color: var(--accent-red); }
+.btn-drug:hover { background: var(--accent-red); }
+
+/* 數據顯示 */
+.param-text { font-family: 'Courier New', monospace; font-size: 3rem; color: var(--accent-green); text-shadow: 0 0 10px var(--accent-green); }

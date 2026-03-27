@@ -1,51 +1,67 @@
 <!DOCTYPE html>
-<html lang="zh-TW" data-theme="monitor">
+<html lang="zh-TW" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>急診心跡 - 專業 ECG 學習系統</title>
+    <title>急診心跡 | ER ECG Simulator</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <!-- 頂部資訊欄 -->
+    <div class="app-wrapper">
         <header>
-            <div class="logo">急診心跡 <span id="rhythm-title">Normal Sinus</span></div>
-            <div class="monitor-stats">
-                <div class="stat-box">HR: <span id="hr-value">72</span></div>
-                <div class="stat-box">SpO2: <span id="spo2-value">98%</span></div>
+            <div class="logo">急診心跡 <small style="font-size: 0.6rem; opacity: 0.6;">ADVANCED ACLS TRAINER</small></div>
+            <div style="display: flex; gap: 40px;">
+                <div class="status-item">STATUS: <span id="status-tag" style="color: var(--accent-green);">STABLE</span></div>
+                <button onclick="toggleTheme()" id="theme-btn">切換至紙本模式</button>
             </div>
-            <button id="theme-toggle">切換模式</button>
         </header>
 
-        <!-- 心電圖顯示區 -->
-        <section class="visual-area">
-            <canvas id="ecg-canvas"></canvas>
-            <div id="heart-conduction">
-                <!-- 這裡未來可放置心臟 SVG 動畫 -->
-                <div class="heart-container">
-                    <div id="conduction-spark"></div>
-                    <p>心臟傳導路徑示意</p>
-                </div>
+        <!-- 左側面板：數據統計 -->
+        <aside class="side-panel" style="background: var(--panel-bg); border-radius: 12px; padding: 20px;">
+            <div class="stat-group">
+                <label>HEART RATE</label>
+                <div class="param-text" id="hr-num">72</div>
+            </div>
+            <div class="stat-group" style="margin-top: 30px;">
+                <label>SpO2 %</label>
+                <div class="param-text" style="color: var(--accent-blue); text-shadow: 0 0 10px var(--accent-blue);">98</div>
+            </div>
+        </aside>
+
+        <!-- 中間：ECG 畫布 -->
+        <main class="monitor-container">
+            <canvas id="ecgCanvas"></canvas>
+        </main>
+
+        <!-- 右側：電傳導動畫 -->
+        <section class="heart-path-panel">
+            <h3>心臟電傳導示意</h3>
+            <svg class="heart-svg" viewBox="0 0 200 200">
+                <!-- 簡化心臟輪廓 -->
+                <path d="M100,40 C100,40 150,20 170,60 C190,100 100,170 100,170 C100,170 10,100 30,60 C50,20 100,40 100,40" fill="none" stroke="var(--accent-red)" stroke-width="3"/>
+                <!-- 傳導點 -->
+                <circle id="node-sa" cx="120" cy="60" r="5" fill="#fff" />
+                <circle id="node-av" cx="100" cy="100" r="5" fill="#fff" />
+                <path id="bundle-path" d="M100,100 L100,130 L80,160 M100,130 L120,160" stroke="#fff" fill="none" stroke-dasharray="100" stroke-dashoffset="100" />
+            </svg>
+            <div id="rhythm-info" style="margin-top: 20px; font-size: 0.9rem; line-height: 1.6;">
+                <b>目前診斷：</b><br><span id="rhythm-detail">正常竇性心律</span>
             </div>
         </section>
 
-        <!-- 操作面板 -->
-        <section class="controls">
-            <div class="control-group">
-                <h3>選擇心律</h3>
-                <div id="rhythm-list" class="button-grid"></div>
+        <!-- 下方：操作台 -->
+        <footer class="dock-panel">
+            <div class="control-card">
+                <h3>基礎與快速心律</h3>
+                <div class="btn-grid" id="fast-rhythms"></div>
             </div>
-            <div class="control-group">
-                <h3>急救藥物</h3>
-                <div id="drug-list" class="button-grid"></div>
+            <div class="control-card">
+                <h3>致命性與傳導阻滯</h3>
+                <div class="btn-grid" id="lethal-rhythms"></div>
             </div>
-        </section>
-
-        <!-- 教學說明區 -->
-        <footer class="info-box">
-            <h4>判讀要點</h4>
-            <p id="rhythm-desc">正常竇性心律 (Sinus Rhythm) 是指心臟的激動起源於竇房結。</p>
+            <div class="control-card">
+                <h3>ACLS 藥物處置</h3>
+                <div class="btn-grid" id="drug-actions"></div>
+            </div>
         </footer>
     </div>
 

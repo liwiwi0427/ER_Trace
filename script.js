@@ -1,90 +1,129 @@
-const canvas = document.getElementById('ecg-canvas');
+const canvas = document.getElementById('ecgCanvas');
 const ctx = canvas.getContext('2d');
 let currentRhythm = "NORMAL";
+let bpm = 72;
 let x = 0;
-let points = [];
-const speed = 2.5;
+let lastY = 150;
 
-function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = 350;
+function initCanvas() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
 }
-window.onresize = resize;
-resize();
 
-// 核心：生成 ECG 波形的數學邏輯
-function getWaveY() {
+// 繪製格線
+function drawGrid() {
+    const theme = document.documentElement.getAttribute('data-theme');
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid-color');
+    ctx.lineWidth = 1;
+    for (let i = 0; i < canvas.width; i += 30) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+    }
+    for (let i = 0; i < canvas.height; i += 30) {
+        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+    }
+}
+
+// 核心波形算法
+function getECGY() {
     const mid = canvas.height / 2;
-    const cfg = RHYTHM_CONFIG[currentRhythm];
     const time = Date.now();
+    const cycle = (time % (60000 / bpm)) / (60000 / bpm);
+
+    let y = 0;
+    if (currentRhythm === "VF") return mid + (Math.random() - 0.5) * 80;
+    if (currentRhythm === "ASYSTOLE") return mid + (Math.random() - 0.5) * 3;
+
+    // P-QRS-T 邏輯
+    if (cycle < 0.1) y = -Math.sin(cycle * 10 * Math.PI) * 10; 
+    else if (cycle < 0.15) y = 0;
+    else if (cycle < 0.18) y = 15; // Q
+    else if (cycle < 0.22) y = -100; // R
+    else if (cycle < 0.25) y = 40; // S
+    else if (cycle < 0.4) y = 0;
+    else if (cycle < 0.6) y = -20; // T
     
-    // 根據不同類型返回波形高度
-    if (currentRhythm === "ASYSTOLE") return mid + (Math.random() - 0.5) * 2;
-    if (currentRhythm === "VF") return mid + (Math.random() - 0.5) * 60;
-    
-    // 正常波形組合 (簡化模型)
-    let beatInterval = 60000 / cfg.bpm;
-    let phase = (time % beatInterval) / beatInterval;
-    
-    if (phase < 0.1) return mid - Math.sin(phase * 10 * Math.PI) * 10; // P wave
-    if (phase > 0.15 && phase < 0.2) return mid + 20; // Q
-    if (phase >= 0.2 && phase < 0.25) return mid - 100; // R
-    if (phase >= 0.25 && phase < 0.3) return mid + 40; // S
-    if (phase > 0.4 && phase < 0.6) return mid - 15; // T
-    
-    return mid;
+    return mid + y;
 }
 
-function animate() {
-    const y = getWaveY();
-    
-    // 繪製線條
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text');
-    ctx.lineWidth = 2;
+function render() {
+    // 螢光尾跡效果：不使用 clearRect，而是覆蓋半透明層
+    const theme = document.documentElement.getAttribute('data-theme');
+    ctx.fillStyle = theme === 'paper' ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)";
+    ctx.fillRect(x, 0, 10, canvas.height); 
+
+    const nextY = getECGY();
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent-green');
+    ctx.lineWidth = 3;
+    ctx.shadowBlur = theme === 'paper' ? 0 : 10;
+    ctx.shadowColor = ctx.strokeStyle;
+
     ctx.beginPath();
-    ctx.moveTo(x, points[x] || y);
-    x += speed;
-    if (x > canvas.width) x = 0;
-    
-    // 擦除前方舊波形
-    ctx.clearRect(x, 0, 50, canvas.height); 
-    
-    ctx.lineTo(x, y);
-    points[x] = y;
+    ctx.moveTo(x, lastY);
+    x += 3;
+    ctx.lineTo(x, nextY);
     ctx.stroke();
 
-    requestAnimationFrame(animate);
+    lastY = nextY;
+    if (x > canvas.width) x = 0;
+
+    requestAnimationFrame(render);
 }
 
-// 初始化按鈕
-function init() {
-    const rhythmList = document.getElementById('rhythm-list');
-    Object.keys(RHYTHM_CONFIG).forEach(key => {
-        const btn = document.createElement('button');
-        btn.innerText = RHYTHM_CONFIG[key].name;
-        btn.onclick = () => {
-            currentRhythm = key;
-            document.getElementById('rhythm-title').innerText = RHYTHM_CONFIG[key].name;
-            document.getElementById('rhythm-desc').innerText = RHYTHM_CONFIG[key].description;
-            document.getElementById('hr-value').innerText = RHYTHM_CONFIG[key].bpm;
-        };
-        rhythmList.appendChild(btn);
-    });
+// 初始化按鈕與邏輯
+function setupControls() {
+    const fastGrid = document.getElementById('fast-rhythms');
+    const lethalGrid = document.getElementById('lethal-rhythms');
+    
+    const rhythms = [
+        { id: "NORMAL", name: "Normal", cat: "fast" },
+        { id: "BRADY", name: "Bradycardia", cat: "lethal" },
+        { id: "PSVT", name: "PSVT", cat: "fast" },
+        { id: "AFIB", name: "A-Fib", cat: "fast" },
+        { id: "VT", name: "VT", cat: "lethal" },
+        { id: "VF", name: "VF", cat: "lethal" },
+        { id: "ASYSTOLE", name: "Asystole", cat: "lethal" }
+    ];
 
-    // 給藥邏輯範例
-    const drugList = document.getElementById('drug-list');
-    Object.keys(DRUG_CONFIG).forEach(key => {
+    rhythms.forEach(r => {
         const btn = document.createElement('button');
-        btn.innerText = DRUG_CONFIG[key].name;
+        btn.innerText = r.name;
         btn.onclick = () => {
-            alert(`已給予 ${DRUG_CONFIG[key].name}，觀察病患反應...`);
-            if (currentRhythm === "BRADY" && key === "atropine") {
-                currentRhythm = "NORMAL"; // 模擬藥效轉復
-            }
+            currentRhythm = r.id;
+            if(r.id === "BRADY") bpm = 40;
+            else if(r.id === "PSVT") bpm = 170;
+            else bpm = 72;
+            document.getElementById('hr-num').innerText = bpm;
+            document.getElementById('rhythm-detail').innerText = r.name;
         };
-        drugList.appendChild(btn);
+        if(r.cat === "fast") fastGrid.appendChild(btn);
+        else lethalGrid.appendChild(btn);
     });
 }
 
-init();
-animate();
+// 給藥模擬
+const drugs = [
+    { name: "Atropine", effect: () => { bpm += 20; } },
+    { name: "Adenosine", effect: () => { 
+        const oldBpm = bpm; bpm = 1; 
+        setTimeout(() => { bpm = oldBpm; }, 3000); 
+    }},
+    { name: "Amiodarone", effect: () => { currentRhythm = "NORMAL"; bpm = 72; } }
+];
+
+const drugGrid = document.getElementById('drug-actions');
+drugs.forEach(d => {
+    const btn = document.createElement('button');
+    btn.className = "btn-drug";
+    btn.innerText = d.name;
+    btn.onclick = () => {
+        d.effect();
+        document.getElementById('hr-num').innerText = bpm;
+    };
+    drugGrid.appendChild(btn);
+});
+
+window.onload = () => {
+    initCanvas();
+    setupControls();
+    render();
+};

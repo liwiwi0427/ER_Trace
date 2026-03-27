@@ -1,0 +1,8 @@
+<script>
+function login() {
+    const pass = document.getElementById('pw').value;
+    if(pass === '119') window.location.href='admin.html';
+    else alert('密碼錯誤');
+}
+</script>
+<input id="pw" type="password"><button onclick="login()">管理員進入</button>
